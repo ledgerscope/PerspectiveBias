@@ -10,6 +10,8 @@ const A4_WIDTH = 0.21;
 const A4_HEIGHT = 0.297;
 const PAPER_THICKNESS = 0.003;
 const HOLD_DISTANCE = 0.9; // meters in front of the camera when "held up"
+const HOLD_SCREEN_FRACTION = 0.82; // fraction of the viewport the held paper should fill
+const HOLD_SCALE_LAMBDA = 8; // ease-in/out speed for the hold scale animation
 const CLICK_MAX_MOVEMENT = 6; // px - below this, a pointer up counts as a click not a drag
 
 interface PaperProps {
@@ -46,6 +48,8 @@ export function Paper({
 }: PaperProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
+  const visualRef = useRef<THREE.Group>(null);
+  const holdScaleRef = useRef(1);
   const { camera } = useThree();
 
   const texture = useMemo(() => createInvoiceTexture(layout.invoice), [layout.invoice]);
@@ -91,10 +95,16 @@ export function Paper({
     }
   });
 
-  // While held, float the paper up in front of the camera each frame.
-  useFrame(() => {
+  // While held, float the paper up in front of the camera each frame, and
+  // scale it up so it reads as "held to your face" - near enough full
+  // screen - rather than a small floating card. The scale target is derived
+  // from the camera's actual FOV/aspect each frame so it fills a consistent
+  // fraction of the viewport at any window size, and eases in/out smoothly
+  // via THREE.MathUtils.damp rather than snapping.
+  useFrame((_state, delta) => {
     const body = bodyRef.current;
     if (!body) return;
+    let targetScale = 1;
     if (isHeld) {
       const forward = new THREE.Vector3();
       camera.getWorldDirection(forward);
@@ -111,6 +121,26 @@ export function Paper({
       const faceAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
       lookQuat.multiply(faceAdjust);
       body.setRotation({ x: lookQuat.x, y: lookQuat.y, z: lookQuat.z, w: lookQuat.w }, true);
+
+      const cam = camera as THREE.PerspectiveCamera;
+      if (cam.isPerspectiveCamera) {
+        const vFov = THREE.MathUtils.degToRad(cam.fov);
+        const viewHeight = 2 * Math.tan(vFov / 2) * HOLD_DISTANCE;
+        const viewWidth = viewHeight * cam.aspect;
+        targetScale = Math.min(
+          (HOLD_SCREEN_FRACTION * viewHeight) / A4_HEIGHT,
+          (HOLD_SCREEN_FRACTION * viewWidth) / A4_WIDTH,
+        );
+      }
+    }
+    // Scale only the visual mesh group, not the RigidBody itself, so the
+    // collider (used for on-table physics/collisions) stays A4-sized; the
+    // held paper is fully kinematic anyway so this purely visual scale-up
+    // doesn't affect physics.
+    const group = visualRef.current;
+    if (group) {
+      holdScaleRef.current = THREE.MathUtils.damp(holdScaleRef.current, targetScale, HOLD_SCALE_LAMBDA, delta);
+      group.scale.setScalar(holdScaleRef.current);
     }
   });
 
@@ -173,24 +203,26 @@ export function Paper({
       angularDamping={2}
       type="dynamic"
     >
-      <mesh
-        ref={meshRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[A4_WIDTH, PAPER_THICKNESS, A4_HEIGHT]} />
-        <meshStandardMaterial color="#f2f2ec" roughness={0.9} />
-      </mesh>
-      {/* Invoice content, printed-side up, laid just above the paper body.
-          receiveShadow is left off here - at this tiny offset above the box
-          it self-shadows into moire/hatching that hides the texture. */}
-      <mesh position={[0, PAPER_THICKNESS / 2 + 0.0003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[A4_WIDTH, A4_HEIGHT]} />
-        <meshStandardMaterial map={texture} roughness={0.9} />
-      </mesh>
+      <group ref={visualRef}>
+        <mesh
+          ref={meshRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[A4_WIDTH, PAPER_THICKNESS, A4_HEIGHT]} />
+          <meshStandardMaterial color="#f2f2ec" roughness={0.9} />
+        </mesh>
+        {/* Invoice content, printed-side up, laid just above the paper body.
+            receiveShadow is left off here - at this tiny offset above the box
+            it self-shadows into moire/hatching that hides the texture. */}
+        <mesh position={[0, PAPER_THICKNESS / 2 + 0.0003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[A4_WIDTH, A4_HEIGHT]} />
+          <meshStandardMaterial map={texture} roughness={0.9} />
+        </mesh>
+      </group>
     </RigidBody>
   );
 }
