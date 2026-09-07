@@ -1,0 +1,1264 @@
+[
+  {
+    "id": "offline-0001",
+    "invoiceNumber": "INV-1000",
+    "contactName": "Soylent Foods",
+    "date": "2025-08-21",
+    "dueDate": "2025-09-04",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 1055.1,
+    "totalTax": 158.27,
+    "total": 1213.37,
+    "lineItems": [
+      {
+        "description": "Office supplies",
+        "quantity": 5,
+        "unitAmount": 211.02
+      }
+    ]
+  },
+  {
+    "id": "offline-0002",
+    "invoiceNumber": "INV-1001",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-08-26",
+    "dueDate": "2025-09-25",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 3491.0,
+    "totalTax": 523.65,
+    "total": 4014.65,
+    "lineItems": [
+      {
+        "description": "Consulting services",
+        "quantity": 10,
+        "unitAmount": 349.1
+      }
+    ]
+  },
+  {
+    "id": "offline-0003",
+    "invoiceNumber": "INV-1002",
+    "contactName": "Hooli Cloud Services",
+    "date": "2025-06-30",
+    "dueDate": "2025-07-30",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 1575.81,
+    "totalTax": 236.37,
+    "total": 1812.18,
+    "lineItems": [
+      {
+        "description": "Training session",
+        "quantity": 9,
+        "unitAmount": 175.09
+      }
+    ]
+  },
+  {
+    "id": "offline-0004",
+    "invoiceNumber": "INV-1003",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-07-28",
+    "dueDate": "2025-08-27",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 5676.19,
+    "totalTax": 851.43,
+    "total": 6527.62,
+    "lineItems": [
+      {
+        "description": "Office supplies",
+        "quantity": 1,
+        "unitAmount": 611.87
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 7,
+        "unitAmount": 285.4
+      },
+      {
+        "description": "Design services",
+        "quantity": 4,
+        "unitAmount": 766.63
+      }
+    ]
+  },
+  {
+    "id": "offline-0005",
+    "invoiceNumber": "INV-1004",
+    "contactName": "Aperture Fixtures",
+    "date": "2025-07-19",
+    "dueDate": "2025-08-02",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 7352.72,
+    "totalTax": 1102.91,
+    "total": 8455.63,
+    "lineItems": [
+      {
+        "description": "Consulting services",
+        "quantity": 6,
+        "unitAmount": 490.91
+      },
+      {
+        "description": "Support retainer",
+        "quantity": 8,
+        "unitAmount": 438.26
+      },
+      {
+        "description": "Maintenance contract",
+        "quantity": 2,
+        "unitAmount": 450.59
+      }
+    ]
+  },
+  {
+    "id": "offline-0006",
+    "invoiceNumber": "INV-1005",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-08-13",
+    "dueDate": "2025-08-27",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 535.79,
+    "totalTax": 80.37,
+    "total": 616.16,
+    "lineItems": [
+      {
+        "description": "Hardware rental",
+        "quantity": 1,
+        "unitAmount": 535.79
+      }
+    ]
+  },
+  {
+    "id": "offline-0007",
+    "invoiceNumber": "INV-1006",
+    "contactName": "Soylent Foods",
+    "date": "2025-09-19",
+    "dueDate": "2025-10-03",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 10784.42,
+    "totalTax": 1617.66,
+    "total": 12402.08,
+    "lineItems": [
+      {
+        "description": "Design services",
+        "quantity": 5,
+        "unitAmount": 373.66
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 3,
+        "unitAmount": 308.74
+      },
+      {
+        "description": "Software license",
+        "quantity": 5,
+        "unitAmount": 567.42
+      },
+      {
+        "description": "Training session",
+        "quantity": 10,
+        "unitAmount": 515.28
+      }
+    ]
+  },
+  {
+    "id": "offline-0008",
+    "invoiceNumber": "INV-1007",
+    "contactName": "Aperture Fixtures",
+    "date": "2025-06-21",
+    "dueDate": "2025-07-12",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 10421.07,
+    "totalTax": 1563.16,
+    "total": 11984.23,
+    "lineItems": [
+      {
+        "description": "Training session",
+        "quantity": 5,
+        "unitAmount": 791.83
+      },
+      {
+        "description": "Consulting services",
+        "quantity": 4,
+        "unitAmount": 554.0
+      },
+      {
+        "description": "Design services",
+        "quantity": 4,
+        "unitAmount": 661.01
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 7,
+        "unitAmount": 228.84
+      }
+    ]
+  },
+  {
+    "id": "offline-0009",
+    "invoiceNumber": "INV-1008",
+    "contactName": "Initech Solutions",
+    "date": "2025-09-21",
+    "dueDate": "2025-10-21",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 5580.84,
+    "totalTax": 837.13,
+    "total": 6417.97,
+    "lineItems": [
+      {
+        "description": "Support retainer",
+        "quantity": 4,
+        "unitAmount": 531.24
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 8,
+        "unitAmount": 131.44
+      },
+      {
+        "description": "Training session",
+        "quantity": 4,
+        "unitAmount": 601.09
+      }
+    ]
+  },
+  {
+    "id": "offline-0010",
+    "invoiceNumber": "INV-1009",
+    "contactName": "Hooli Cloud Services",
+    "date": "2025-07-25",
+    "dueDate": "2025-08-24",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 8465.72,
+    "totalTax": 1269.86,
+    "total": 9735.58,
+    "lineItems": [
+      {
+        "description": "Office supplies",
+        "quantity": 6,
+        "unitAmount": 191.07
+      },
+      {
+        "description": "Consulting services",
+        "quantity": 9,
+        "unitAmount": 404.94
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 2,
+        "unitAmount": 139.22
+      },
+      {
+        "description": "Support retainer",
+        "quantity": 7,
+        "unitAmount": 485.2
+      }
+    ]
+  },
+  {
+    "id": "offline-0011",
+    "invoiceNumber": "INV-1010",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-07-30",
+    "dueDate": "2025-08-29",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 10423.7,
+    "totalTax": 1563.56,
+    "total": 11987.26,
+    "lineItems": [
+      {
+        "description": "Consulting services",
+        "quantity": 9,
+        "unitAmount": 691.41
+      },
+      {
+        "description": "Training session",
+        "quantity": 2,
+        "unitAmount": 551.73
+      },
+      {
+        "description": "Design services",
+        "quantity": 5,
+        "unitAmount": 619.51
+      }
+    ]
+  },
+  {
+    "id": "offline-0012",
+    "invoiceNumber": "INV-1011",
+    "contactName": "Umbrella Supplies",
+    "date": "2025-07-26",
+    "dueDate": "2025-08-09",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 12145.95,
+    "totalTax": 1821.89,
+    "total": 13967.84,
+    "lineItems": [
+      {
+        "description": "Hardware rental",
+        "quantity": 1,
+        "unitAmount": 763.98
+      },
+      {
+        "description": "Training session",
+        "quantity": 9,
+        "unitAmount": 614.33
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 2,
+        "unitAmount": 699.0
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 9,
+        "unitAmount": 495.0
+      }
+    ]
+  },
+  {
+    "id": "offline-0013",
+    "invoiceNumber": "INV-1012",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-08-09",
+    "dueDate": "2025-09-08",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 2728.4,
+    "totalTax": 409.26,
+    "total": 3137.66,
+    "lineItems": [
+      {
+        "description": "Consulting services",
+        "quantity": 10,
+        "unitAmount": 272.84
+      }
+    ]
+  },
+  {
+    "id": "offline-0014",
+    "invoiceNumber": "INV-1013",
+    "contactName": "Cyberdyne Parts",
+    "date": "2025-09-21",
+    "dueDate": "2025-10-12",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 381.5,
+    "totalTax": 57.23,
+    "total": 438.73,
+    "lineItems": [
+      {
+        "description": "Maintenance contract",
+        "quantity": 1,
+        "unitAmount": 207.88
+      },
+      {
+        "description": "Cloud hosting",
+        "quantity": 2,
+        "unitAmount": 86.81
+      }
+    ]
+  },
+  {
+    "id": "offline-0015",
+    "invoiceNumber": "INV-1014",
+    "contactName": "Hooli Cloud Services",
+    "date": "2025-09-06",
+    "dueDate": "2025-10-06",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 2284.05,
+    "totalTax": 342.61,
+    "total": 2626.66,
+    "lineItems": [
+      {
+        "description": "Training session",
+        "quantity": 3,
+        "unitAmount": 534.61
+      },
+      {
+        "description": "Maintenance contract",
+        "quantity": 3,
+        "unitAmount": 226.74
+      }
+    ]
+  },
+  {
+    "id": "offline-0016",
+    "invoiceNumber": "INV-1015",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-09-27",
+    "dueDate": "2025-10-27",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 7429.65,
+    "totalTax": 1114.45,
+    "total": 8544.1,
+    "lineItems": [
+      {
+        "description": "Design services",
+        "quantity": 5,
+        "unitAmount": 331.21
+      },
+      {
+        "description": "Cloud hosting",
+        "quantity": 8,
+        "unitAmount": 721.7
+      }
+    ]
+  },
+  {
+    "id": "offline-0017",
+    "invoiceNumber": "INV-1016",
+    "contactName": "Cyberdyne Parts",
+    "date": "2025-06-29",
+    "dueDate": "2025-07-13",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 2595.15,
+    "totalTax": 389.27,
+    "total": 2984.42,
+    "lineItems": [
+      {
+        "description": "Freight and handling",
+        "quantity": 1,
+        "unitAmount": 478.88
+      },
+      {
+        "description": "Software license",
+        "quantity": 10,
+        "unitAmount": 191.77
+      },
+      {
+        "description": "Consulting services",
+        "quantity": 1,
+        "unitAmount": 198.57
+      }
+    ]
+  },
+  {
+    "id": "offline-0018",
+    "invoiceNumber": "INV-1017",
+    "contactName": "Wonka Sweets Co",
+    "date": "2025-06-10",
+    "dueDate": "2025-07-10",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 3817.8,
+    "totalTax": 572.67,
+    "total": 4390.47,
+    "lineItems": [
+      {
+        "description": "Freight and handling",
+        "quantity": 5,
+        "unitAmount": 541.8
+      },
+      {
+        "description": "Maintenance contract",
+        "quantity": 9,
+        "unitAmount": 123.2
+      }
+    ]
+  },
+  {
+    "id": "offline-0019",
+    "invoiceNumber": "INV-1018",
+    "contactName": "Tyrell Robotics",
+    "date": "2025-07-02",
+    "dueDate": "2025-07-23",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 3355.88,
+    "totalTax": 503.38,
+    "total": 3859.26,
+    "lineItems": [
+      {
+        "description": "Support retainer",
+        "quantity": 4,
+        "unitAmount": 93.57
+      },
+      {
+        "description": "Cloud hosting",
+        "quantity": 6,
+        "unitAmount": 350.39
+      },
+      {
+        "description": "Software license",
+        "quantity": 1,
+        "unitAmount": 545.22
+      },
+      {
+        "description": "Design services",
+        "quantity": 1,
+        "unitAmount": 334.04
+      }
+    ]
+  },
+  {
+    "id": "offline-0020",
+    "invoiceNumber": "INV-1019",
+    "contactName": "Cyberdyne Parts",
+    "date": "2025-07-02",
+    "dueDate": "2025-07-16",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 4041.09,
+    "totalTax": 606.16,
+    "total": 4647.25,
+    "lineItems": [
+      {
+        "description": "Support retainer",
+        "quantity": 9,
+        "unitAmount": 369.92
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 3,
+        "unitAmount": 237.27
+      }
+    ]
+  },
+  {
+    "id": "offline-0021",
+    "invoiceNumber": "INV-1020",
+    "contactName": "Cyberdyne Parts",
+    "date": "2025-07-27",
+    "dueDate": "2025-08-26",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 528.67,
+    "totalTax": 79.3,
+    "total": 607.97,
+    "lineItems": [
+      {
+        "description": "Training session",
+        "quantity": 1,
+        "unitAmount": 528.67
+      }
+    ]
+  },
+  {
+    "id": "offline-0022",
+    "invoiceNumber": "INV-1021",
+    "contactName": "Hooli Cloud Services",
+    "date": "2025-06-12",
+    "dueDate": "2025-06-26",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 7858.97,
+    "totalTax": 1178.85,
+    "total": 9037.82,
+    "lineItems": [
+      {
+        "description": "Freight and handling",
+        "quantity": 7,
+        "unitAmount": 398.8
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 7,
+        "unitAmount": 723.91
+      }
+    ]
+  },
+  {
+    "id": "offline-0023",
+    "invoiceNumber": "INV-1022",
+    "contactName": "Acme Widgets Ltd",
+    "date": "2025-07-20",
+    "dueDate": "2025-08-10",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 6585.98,
+    "totalTax": 987.9,
+    "total": 7573.88,
+    "lineItems": [
+      {
+        "description": "Training session",
+        "quantity": 5,
+        "unitAmount": 349.95
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 8,
+        "unitAmount": 140.74
+      },
+      {
+        "description": "Maintenance contract",
+        "quantity": 4,
+        "unitAmount": 775.59
+      },
+      {
+        "description": "Design services",
+        "quantity": 9,
+        "unitAmount": 67.55
+      }
+    ]
+  },
+  {
+    "id": "offline-0024",
+    "invoiceNumber": "INV-1023",
+    "contactName": "Pied Piper Hosting",
+    "date": "2025-08-14",
+    "dueDate": "2025-09-04",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 989.76,
+    "totalTax": 148.46,
+    "total": 1138.22,
+    "lineItems": [
+      {
+        "description": "Software license",
+        "quantity": 1,
+        "unitAmount": 769.41
+      },
+      {
+        "description": "Software license",
+        "quantity": 3,
+        "unitAmount": 73.45
+      }
+    ]
+  },
+  {
+    "id": "offline-0025",
+    "invoiceNumber": "INV-1024",
+    "contactName": "Wonka Sweets Co",
+    "date": "2025-07-22",
+    "dueDate": "2025-08-05",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 5531.2,
+    "totalTax": 829.68,
+    "total": 6360.88,
+    "lineItems": [
+      {
+        "description": "Maintenance contract",
+        "quantity": 10,
+        "unitAmount": 483.72
+      },
+      {
+        "description": "Maintenance contract",
+        "quantity": 2,
+        "unitAmount": 347.0
+      }
+    ]
+  },
+  {
+    "id": "offline-0026",
+    "invoiceNumber": "INV-1025",
+    "contactName": "Stark Industrial",
+    "date": "2025-07-11",
+    "dueDate": "2025-08-01",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 2868.84,
+    "totalTax": 430.33,
+    "total": 3299.17,
+    "lineItems": [
+      {
+        "description": "Support retainer",
+        "quantity": 6,
+        "unitAmount": 206.18
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 3,
+        "unitAmount": 543.92
+      }
+    ]
+  },
+  {
+    "id": "offline-0027",
+    "invoiceNumber": "INV-1026",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-09-27",
+    "dueDate": "2025-10-11",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 4036.0,
+    "totalTax": 605.4,
+    "total": 4641.4,
+    "lineItems": [
+      {
+        "description": "Maintenance contract",
+        "quantity": 8,
+        "unitAmount": 504.5
+      }
+    ]
+  },
+  {
+    "id": "offline-0028",
+    "invoiceNumber": "INV-1027",
+    "contactName": "Wonka Sweets Co",
+    "date": "2025-08-08",
+    "dueDate": "2025-08-22",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 8839.3,
+    "totalTax": 1325.9,
+    "total": 10165.2,
+    "lineItems": [
+      {
+        "description": "Software license",
+        "quantity": 3,
+        "unitAmount": 747.94
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 4,
+        "unitAmount": 308.23
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 8,
+        "unitAmount": 670.32
+      }
+    ]
+  },
+  {
+    "id": "offline-0029",
+    "invoiceNumber": "INV-1028",
+    "contactName": "Wonka Sweets Co",
+    "date": "2025-06-02",
+    "dueDate": "2025-07-02",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 3326.14,
+    "totalTax": 498.92,
+    "total": 3825.06,
+    "lineItems": [
+      {
+        "description": "Office supplies",
+        "quantity": 2,
+        "unitAmount": 752.37
+      },
+      {
+        "description": "Software license",
+        "quantity": 5,
+        "unitAmount": 110.03
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 9,
+        "unitAmount": 141.25
+      }
+    ]
+  },
+  {
+    "id": "offline-0030",
+    "invoiceNumber": "INV-1029",
+    "contactName": "Cyberdyne Parts",
+    "date": "2025-08-31",
+    "dueDate": "2025-09-21",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 2163.09,
+    "totalTax": 324.46,
+    "total": 2487.55,
+    "lineItems": [
+      {
+        "description": "Hardware rental",
+        "quantity": 5,
+        "unitAmount": 414.22
+      },
+      {
+        "description": "Support retainer",
+        "quantity": 1,
+        "unitAmount": 91.99
+      }
+    ]
+  },
+  {
+    "id": "offline-0031",
+    "invoiceNumber": "INV-1030",
+    "contactName": "Blue Sky Consulting",
+    "date": "2025-06-06",
+    "dueDate": "2025-06-20",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 6547.9,
+    "totalTax": 982.18,
+    "total": 7530.08,
+    "lineItems": [
+      {
+        "description": "Hardware rental",
+        "quantity": 3,
+        "unitAmount": 516.95
+      },
+      {
+        "description": "Training session",
+        "quantity": 3,
+        "unitAmount": 598.16
+      },
+      {
+        "description": "Software license",
+        "quantity": 7,
+        "unitAmount": 457.51
+      }
+    ]
+  },
+  {
+    "id": "offline-0032",
+    "invoiceNumber": "INV-1031",
+    "contactName": "Pied Piper Hosting",
+    "date": "2025-08-09",
+    "dueDate": "2025-08-23",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 5388.75,
+    "totalTax": 808.31,
+    "total": 6197.06,
+    "lineItems": [
+      {
+        "description": "Support retainer",
+        "quantity": 10,
+        "unitAmount": 450.97
+      },
+      {
+        "description": "Design services",
+        "quantity": 3,
+        "unitAmount": 52.63
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 1,
+        "unitAmount": 721.16
+      }
+    ]
+  },
+  {
+    "id": "offline-0033",
+    "invoiceNumber": "INV-1032",
+    "contactName": "Aperture Fixtures",
+    "date": "2025-08-25",
+    "dueDate": "2025-09-08",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 14776.89,
+    "totalTax": 2216.53,
+    "total": 16993.42,
+    "lineItems": [
+      {
+        "description": "Support retainer",
+        "quantity": 9,
+        "unitAmount": 709.63
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 10,
+        "unitAmount": 604.59
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 3,
+        "unitAmount": 781.44
+      }
+    ]
+  },
+  {
+    "id": "offline-0034",
+    "invoiceNumber": "INV-1033",
+    "contactName": "Globex Corp",
+    "date": "2025-06-04",
+    "dueDate": "2025-06-18",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 10143.06,
+    "totalTax": 1521.46,
+    "total": 11664.52,
+    "lineItems": [
+      {
+        "description": "Freight and handling",
+        "quantity": 7,
+        "unitAmount": 645.74
+      },
+      {
+        "description": "Software license",
+        "quantity": 5,
+        "unitAmount": 144.17
+      },
+      {
+        "description": "Cloud hosting",
+        "quantity": 7,
+        "unitAmount": 700.29
+      }
+    ]
+  },
+  {
+    "id": "offline-0035",
+    "invoiceNumber": "INV-1034",
+    "contactName": "Tyrell Robotics",
+    "date": "2025-09-13",
+    "dueDate": "2025-10-04",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 5386.22,
+    "totalTax": 807.93,
+    "total": 6194.15,
+    "lineItems": [
+      {
+        "description": "Freight and handling",
+        "quantity": 5,
+        "unitAmount": 660.02
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 4,
+        "unitAmount": 38.46
+      },
+      {
+        "description": "Software license",
+        "quantity": 7,
+        "unitAmount": 276.04
+      }
+    ]
+  },
+  {
+    "id": "offline-0036",
+    "invoiceNumber": "INV-1035",
+    "contactName": "Umbrella Supplies",
+    "date": "2025-07-15",
+    "dueDate": "2025-08-14",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 5436.01,
+    "totalTax": 815.4,
+    "total": 6251.41,
+    "lineItems": [
+      {
+        "description": "Consulting services",
+        "quantity": 9,
+        "unitAmount": 278.3
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 2,
+        "unitAmount": 704.09
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 3,
+        "unitAmount": 472.86
+      },
+      {
+        "description": "Support retainer",
+        "quantity": 1,
+        "unitAmount": 104.55
+      }
+    ]
+  },
+  {
+    "id": "offline-0037",
+    "invoiceNumber": "INV-1036",
+    "contactName": "Initech Solutions",
+    "date": "2025-07-26",
+    "dueDate": "2025-08-25",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 5051.27,
+    "totalTax": 757.69,
+    "total": 5808.96,
+    "lineItems": [
+      {
+        "description": "Freight and handling",
+        "quantity": 7,
+        "unitAmount": 721.61
+      }
+    ]
+  },
+  {
+    "id": "offline-0038",
+    "invoiceNumber": "INV-1037",
+    "contactName": "Pied Piper Hosting",
+    "date": "2025-08-30",
+    "dueDate": "2025-09-20",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 6677.55,
+    "totalTax": 1001.63,
+    "total": 7679.18,
+    "lineItems": [
+      {
+        "description": "Training session",
+        "quantity": 9,
+        "unitAmount": 741.95
+      }
+    ]
+  },
+  {
+    "id": "offline-0039",
+    "invoiceNumber": "INV-1038",
+    "contactName": "Soylent Foods",
+    "date": "2025-07-17",
+    "dueDate": "2025-08-07",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 3036.36,
+    "totalTax": 455.45,
+    "total": 3491.81,
+    "lineItems": [
+      {
+        "description": "Software license",
+        "quantity": 6,
+        "unitAmount": 506.06
+      }
+    ]
+  },
+  {
+    "id": "offline-0040",
+    "invoiceNumber": "INV-1039",
+    "contactName": "Wayne Logistics",
+    "date": "2025-08-04",
+    "dueDate": "2025-08-25",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 11553.91,
+    "totalTax": 1733.09,
+    "total": 13287.0,
+    "lineItems": [
+      {
+        "description": "Hardware rental",
+        "quantity": 6,
+        "unitAmount": 333.87
+      },
+      {
+        "description": "Support retainer",
+        "quantity": 9,
+        "unitAmount": 119.28
+      },
+      {
+        "description": "Office supplies",
+        "quantity": 7,
+        "unitAmount": 548.31
+      },
+      {
+        "description": "Support retainer",
+        "quantity": 10,
+        "unitAmount": 463.9
+      }
+    ]
+  },
+  {
+    "id": "offline-0041",
+    "invoiceNumber": "INV-1040",
+    "contactName": "Pied Piper Hosting",
+    "date": "2025-07-09",
+    "dueDate": "2025-07-30",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 6726.37,
+    "totalTax": 1008.96,
+    "total": 7735.33,
+    "lineItems": [
+      {
+        "description": "Maintenance contract",
+        "quantity": 7,
+        "unitAmount": 632.89
+      },
+      {
+        "description": "Cloud hosting",
+        "quantity": 6,
+        "unitAmount": 382.69
+      }
+    ]
+  },
+  {
+    "id": "offline-0042",
+    "invoiceNumber": "INV-1041",
+    "contactName": "Pied Piper Hosting",
+    "date": "2025-08-05",
+    "dueDate": "2025-08-26",
+    "status": "SUBMITTED",
+    "currencyCode": "NZD",
+    "subTotal": 1039.74,
+    "totalTax": 155.96,
+    "total": 1195.7,
+    "lineItems": [
+      {
+        "description": "Maintenance contract",
+        "quantity": 2,
+        "unitAmount": 241.35
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 6,
+        "unitAmount": 92.84
+      }
+    ]
+  },
+  {
+    "id": "offline-0043",
+    "invoiceNumber": "INV-1042",
+    "contactName": "Stark Industrial",
+    "date": "2025-06-29",
+    "dueDate": "2025-07-13",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 6884.05,
+    "totalTax": 1032.61,
+    "total": 7916.66,
+    "lineItems": [
+      {
+        "description": "Cloud hosting",
+        "quantity": 1,
+        "unitAmount": 56.05
+      },
+      {
+        "description": "Software license",
+        "quantity": 10,
+        "unitAmount": 682.8
+      }
+    ]
+  },
+  {
+    "id": "offline-0044",
+    "invoiceNumber": "INV-1043",
+    "contactName": "Aperture Fixtures",
+    "date": "2025-09-22",
+    "dueDate": "2025-10-22",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 4434.46,
+    "totalTax": 665.17,
+    "total": 5099.63,
+    "lineItems": [
+      {
+        "description": "Freight and handling",
+        "quantity": 7,
+        "unitAmount": 405.61
+      },
+      {
+        "description": "Consulting services",
+        "quantity": 3,
+        "unitAmount": 531.73
+      }
+    ]
+  },
+  {
+    "id": "offline-0045",
+    "invoiceNumber": "INV-1044",
+    "contactName": "Aperture Fixtures",
+    "date": "2025-09-08",
+    "dueDate": "2025-09-29",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 2414.99,
+    "totalTax": 362.25,
+    "total": 2777.24,
+    "lineItems": [
+      {
+        "description": "Training session",
+        "quantity": 3,
+        "unitAmount": 647.21
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 8,
+        "unitAmount": 59.17
+      }
+    ]
+  },
+  {
+    "id": "offline-0046",
+    "invoiceNumber": "INV-1045",
+    "contactName": "Stark Industrial",
+    "date": "2025-07-29",
+    "dueDate": "2025-08-12",
+    "status": "PAID",
+    "currencyCode": "NZD",
+    "subTotal": 22913.2,
+    "totalTax": 3436.98,
+    "total": 26350.18,
+    "lineItems": [
+      {
+        "description": "Maintenance contract",
+        "quantity": 9,
+        "unitAmount": 790.56
+      },
+      {
+        "description": "Cloud hosting",
+        "quantity": 6,
+        "unitAmount": 761.03
+      },
+      {
+        "description": "Training session",
+        "quantity": 10,
+        "unitAmount": 655.71
+      },
+      {
+        "description": "Training session",
+        "quantity": 7,
+        "unitAmount": 667.84
+      }
+    ]
+  },
+  {
+    "id": "offline-0047",
+    "invoiceNumber": "INV-1046",
+    "contactName": "Aperture Fixtures",
+    "date": "2025-09-04",
+    "dueDate": "2025-09-25",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 9357.12,
+    "totalTax": 1403.57,
+    "total": 10760.69,
+    "lineItems": [
+      {
+        "description": "Hardware rental",
+        "quantity": 5,
+        "unitAmount": 606.39
+      },
+      {
+        "description": "Freight and handling",
+        "quantity": 9,
+        "unitAmount": 397.99
+      },
+      {
+        "description": "Hardware rental",
+        "quantity": 5,
+        "unitAmount": 363.1
+      },
+      {
+        "description": "Design services",
+        "quantity": 4,
+        "unitAmount": 231.94
+      }
+    ]
+  },
+  {
+    "id": "offline-0048",
+    "invoiceNumber": "INV-1047",
+    "contactName": "Umbrella Supplies",
+    "date": "2025-06-11",
+    "dueDate": "2025-06-25",
+    "status": "AUTHORISED",
+    "currencyCode": "NZD",
+    "subTotal": 1555.48,
+    "totalTax": 233.32,
+    "total": 1788.8,
+    "lineItems": [
+      {
+        "description": "Office supplies",
+        "quantity": 4,
+        "unitAmount": 318.77
+      },
+      {
+        "description": "Support retainer",
+        "quantity": 4,
+        "unitAmount": 70.1
+      }
+    ]
+  }
+]
