@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import { OrbitControls } from "@react-three/drei";
@@ -14,6 +14,17 @@ export function Scene() {
   const { invoices, mode, error } = useInvoices();
   const [heldId, setHeldId] = useState<string | null>(null);
   const resetToken = useResetOnSpace(() => setHeldId(null));
+
+  // Tracks how many papers currently have an active pointer-down (dragging)
+  // gesture on them, so the orbit camera can be suspended for the whole
+  // gesture - not just once a paper is "held" - otherwise OrbitControls
+  // fights the drag and both the pan and the click-to-hold break.
+  const dragCountRef = useRef(0);
+  const [isDraggingPaper, setIsDraggingPaper] = useState(false);
+  const handleDragStateChange = useCallback((dragging: boolean) => {
+    dragCountRef.current += dragging ? 1 : -1;
+    setIsDraggingPaper(dragCountRef.current > 0);
+  }, []);
 
   const layouts = useMemo(() => generateInitialLayout(invoices), [invoices]);
 
@@ -39,12 +50,13 @@ export function Scene() {
               heldId={heldId}
               onHold={setHeldId}
               resetToken={resetToken}
-              tableHeight={TABLE_DIMENSIONS.height}
+              surfaceY={TABLE_DIMENSIONS.surfaceY}
+              onDragStateChange={handleDragStateChange}
             />
           ))}
         </Physics>
         <OrbitControls
-          enabled={!heldId}
+          enabled={!heldId && !isDraggingPaper}
           target={[0, TABLE_DIMENSIONS.height, 0]}
           maxPolarAngle={Math.PI / 2.1}
           minDistance={0.8}

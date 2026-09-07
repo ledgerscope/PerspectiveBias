@@ -9,7 +9,14 @@ export interface PaperLayout {
 
 const TABLE_WIDTH = 3.6; // meters, roughly desk-sized
 const TABLE_DEPTH = 2.0;
-const PAPER_HEIGHT_ABOVE_TABLE = 0.02;
+const TABLE_HEIGHT = 0.9; // y of the desk's centerline (legs support up to here)
+const TABLE_THICKNESS = 0.06;
+// Top face of the desk slab - papers must be placed at/above this, not at
+// TABLE_HEIGHT itself, otherwise they spawn embedded inside the slab.
+const TABLE_SURFACE_Y = TABLE_HEIGHT + TABLE_THICKNESS / 2;
+// Small clearance above the surface so papers start just above the desk and
+// settle down onto it under gravity, rather than starting flush/intersecting.
+const PAPER_HEIGHT_ABOVE_TABLE = 0.006;
 
 // Simple seeded PRNG so the "random" scatter/stacks are stable across
 // reloads (until a fresh invoice list changes the count).
@@ -74,6 +81,7 @@ export function generateInitialLayout(invoices: Invoice[]): PaperLayout[] {
 export const TABLE_DIMENSIONS = {
   width: TABLE_WIDTH,
   depth: TABLE_DEPTH,
-  height: 0.9,
-  thickness: 0.06,
+  height: TABLE_HEIGHT,
+  thickness: TABLE_THICKNESS,
+  surfaceY: TABLE_SURFACE_Y,
 };

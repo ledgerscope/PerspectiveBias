@@ -8,7 +8,7 @@ import { createInvoiceTexture } from "./textureUtils";
 
 const A4_WIDTH = 0.21;
 const A4_HEIGHT = 0.297;
-const PAPER_THICKNESS = 0.001;
+const PAPER_THICKNESS = 0.003;
 const HOLD_DISTANCE = 0.9; // meters in front of the camera when "held up"
 const CLICK_MAX_MOVEMENT = 6; // px - below this, a pointer up counts as a click not a drag
 
@@ -17,7 +17,8 @@ interface PaperProps {
   heldId: string | null;
   onHold: (id: string | null) => void;
   resetToken: number;
-  tableHeight: number;
+  surfaceY: number;
+  onDragStateChange: (dragging: boolean) => void;
 }
 
 /**
@@ -28,8 +29,21 @@ interface PaperProps {
  *    face"), and clicked again to drop it,
  *  - reset back to its original table position on a global `resetToken`
  *    bump (space bar).
+ *
+ * Rendered as a plain box (the paper's body/edges) plus a separate textured
+ * plane laid on top facing +Y, rather than a single box with a 6-slot
+ * material array - the multi-material box attach approach was unreliable
+ * for showing the invoice texture, this plane approach mirrors the
+ * (working) wall photo technique.
  */
-export function Paper({ layout, heldId, onHold, resetToken, tableHeight }: PaperProps) {
+export function Paper({
+  layout,
+  heldId,
+  onHold,
+  resetToken,
+  surfaceY,
+  onDragStateChange,
+}: PaperProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
@@ -42,16 +56,14 @@ export function Paper({ layout, heldId, onHold, resetToken, tableHeight }: Paper
     downX: number;
     downY: number;
     moved: boolean;
-    plane: THREE.Plane;
-    offset: THREE.Vector3;
+    heldAtDown: boolean;
   }>({
     dragging: false,
     pointerId: null,
     downX: 0,
     downY: 0,
     moved: false,
-    plane: new THREE.Plane(new THREE.Vector3(0, 1, 0), -(tableHeight + 0.02)),
-    offset: new THREE.Vector3(),
+    heldAtDown: false,
   });
 
   const lastResetToken = useRef(resetToken);
@@ -65,7 +77,7 @@ export function Paper({ layout, heldId, onHold, resetToken, tableHeight }: Paper
       if (body) {
         body.setBodyType(RigidBodyType.KinematicPositionBased, true);
         body.setTranslation(
-          { x: layout.position[0], y: layout.position[1] + tableHeight, z: layout.position[2] },
+          { x: layout.position[0], y: layout.position[1] + surfaceY, z: layout.position[2] },
           true,
         );
         const quat = new THREE.Quaternion().setFromEuler(
@@ -89,32 +101,37 @@ export function Paper({ layout, heldId, onHold, resetToken, tableHeight }: Paper
       const target = camera.position.clone().add(forward.multiplyScalar(HOLD_DISTANCE));
       body.setBodyType(RigidBodyType.KinematicPositionBased, true);
       body.setTranslation({ x: target.x, y: target.y, z: target.z }, true);
-      // Face the camera.
+      // Face the camera, printed side out. The invoice texture lives on the
+      // local +Y face, but Matrix4.lookAt() orients local -Z toward the
+      // look target, so rotate -90deg about local X first to remap the
+      // printed (+Y) face onto that forward direction.
       const lookQuat = new THREE.Quaternion();
       const m = new THREE.Matrix4().lookAt(camera.position, target, camera.up);
       lookQuat.setFromRotationMatrix(m);
-      // Rotate an extra 180deg so the printed side faces the camera.
-      const flip = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-      lookQuat.multiply(flip);
+      const faceAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      lookQuat.multiply(faceAdjust);
       body.setRotation({ x: lookQuat.x, y: lookQuat.y, z: lookQuat.z, w: lookQuat.w }, true);
     }
   });
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    if (isHeld) return; // held papers are released via click handling below
-    const body = bodyRef.current;
-    if (!body) return;
     (e.target as Element).setPointerCapture?.(e.pointerId);
     dragState.current.dragging = true;
     dragState.current.pointerId = e.pointerId;
     dragState.current.downX = e.clientX;
     dragState.current.downY = e.clientY;
     dragState.current.moved = false;
+    dragState.current.heldAtDown = isHeld;
+    if (isHeld) return; // still track the click for release, but don't start a table drag
+    const body = bodyRef.current;
+    if (!body) return;
+    onDragStateChange(true); // suspend camera orbit while interacting with this paper
     body.setBodyType(RigidBodyType.KinematicPositionBased, true);
   };
 
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (isHeld) return; // held papers don't get dragged around the table
     const state = dragState.current;
     if (!state.dragging || state.pointerId !== e.pointerId) return;
     const dx = e.clientX - state.downX;
@@ -133,6 +150,7 @@ export function Paper({ layout, heldId, onHold, resetToken, tableHeight }: Paper
     if (state.pointerId !== e.pointerId) return;
     state.dragging = false;
     state.pointerId = null;
+    if (!state.heldAtDown) onDragStateChange(false);
     const body = bodyRef.current;
     if (body) {
       body.setBodyType(RigidBodyType.Dynamic, true);
@@ -147,7 +165,7 @@ export function Paper({ layout, heldId, onHold, resetToken, tableHeight }: Paper
   return (
     <RigidBody
       ref={bodyRef}
-      position={[layout.position[0], layout.position[1] + tableHeight, layout.position[2]]}
+      position={[layout.position[0], layout.position[1] + surfaceY, layout.position[2]]}
       rotation={layout.rotation}
       colliders="cuboid"
       mass={0.01}
@@ -164,12 +182,14 @@ export function Paper({ layout, heldId, onHold, resetToken, tableHeight }: Paper
         receiveShadow
       >
         <boxGeometry args={[A4_WIDTH, PAPER_THICKNESS, A4_HEIGHT]} />
-        <meshStandardMaterial attach="material-2" map={texture} roughness={0.9} />
-        <meshStandardMaterial attach="material-0" color="#f5f5f0" roughness={0.9} />
-        <meshStandardMaterial attach="material-1" color="#f5f5f0" roughness={0.9} />
-        <meshStandardMaterial attach="material-3" color="#f5f5f0" roughness={0.9} />
-        <meshStandardMaterial attach="material-4" color="#ffffff" roughness={0.9} />
-        <meshStandardMaterial attach="material-5" color="#e8e8e0" roughness={0.9} />
+        <meshStandardMaterial color="#f2f2ec" roughness={0.9} />
+      </mesh>
+      {/* Invoice content, printed-side up, laid just above the paper body.
+          receiveShadow is left off here - at this tiny offset above the box
+          it self-shadows into moire/hatching that hides the texture. */}
+      <mesh position={[0, PAPER_THICKNESS / 2 + 0.0003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[A4_WIDTH, A4_HEIGHT]} />
+        <meshStandardMaterial map={texture} roughness={0.9} />
       </mesh>
     </RigidBody>
   );

@@ -123,17 +123,29 @@ export function createInvoiceTexture(invoice: Invoice): THREE.CanvasTexture {
   );
 
   // Subtle paper texture noise so it doesn't look perfectly flat/digital.
-  const noise = ctx.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
-  for (let i = 0; i < noise.data.length; i += 4) {
-    const shade = 250 + Math.floor(Math.random() * 5);
-    noise.data[i] = shade;
-    noise.data[i + 1] = shade;
-    noise.data[i + 2] = shade;
-    noise.data[i + 3] = 6; // very low alpha overlay
+  // putImageData() writes pixels directly and ignores
+  // globalCompositeOperation/alpha blending entirely, which previously wiped
+  // out all the text drawn above. Draw the noise onto its own canvas first,
+  // then composite that canvas in with drawImage(), which does respect
+  // compositing and alpha.
+  const noiseCanvas = document.createElement("canvas");
+  noiseCanvas.width = CANVAS_WIDTH;
+  noiseCanvas.height = CANVAS_HEIGHT;
+  const noiseCtx = noiseCanvas.getContext("2d");
+  if (noiseCtx) {
+    const noise = noiseCtx.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
+    for (let i = 0; i < noise.data.length; i += 4) {
+      const shade = 250 + Math.floor(Math.random() * 5);
+      noise.data[i] = shade;
+      noise.data[i + 1] = shade;
+      noise.data[i + 2] = shade;
+      noise.data[i + 3] = 40;
+    }
+    noiseCtx.putImageData(noise, 0, 0);
+    ctx.globalCompositeOperation = "multiply";
+    ctx.drawImage(noiseCanvas, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
   }
-  ctx.globalCompositeOperation = "multiply";
-  ctx.putImageData(noise, 0, 0);
-  ctx.globalCompositeOperation = "source-over";
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -181,6 +193,71 @@ export function createPlaceholderPhotoTexture(seed: number): THREE.CanvasTexture
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 14;
   ctx.strokeRect(7, 7, size - 14, size - 14);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/** Faux-inspirational office posters that are actually the opposite. */
+export const DEMOTIVATIONAL_SAYINGS: string[] = [
+  "It's not meant to be fun,\nyou're here to work",
+  "Dream less.\nReconcile more.",
+  "TEAMWORK\nmeans someone else\ngets the blame",
+  "Every invoice matters.\n(to someone else)",
+  "You miss 100% of the\nnaps you don't take\nUnfortunately, HR notices",
+  "ALMOST FRIDAY\nsaid every day of the week",
+];
+
+/**
+ * Renders a black-frame "motivational" poster with a sarcastic office
+ * saying - the visual gag for the cubicle wall.
+ */
+export function createPosterTexture(text: string): THREE.CanvasTexture {
+  const width = 400;
+  const height = 500;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+
+  // Black poster frame/background, classic demotivator style.
+  ctx.fillStyle = "#0a0a0a";
+  ctx.fillRect(0, 0, width, height);
+
+  const imageInset = 24;
+  const imageBottom = height * 0.62;
+  ctx.strokeStyle = "#3a3a3a";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(imageInset, imageInset, width - imageInset * 2, imageBottom - imageInset);
+
+  // Bleak little "photo" area: flat grey gradient horizon.
+  const grad = ctx.createLinearGradient(0, imageInset, 0, imageBottom);
+  grad.addColorStop(0, "#5a6570");
+  grad.addColorStop(1, "#8a8478");
+  ctx.fillStyle = grad;
+  ctx.fillRect(imageInset + 2, imageInset + 2, width - imageInset * 2 - 4, imageBottom - imageInset - 4);
+
+  // A single small silhouette figure slumped at a desk, for the "bleak" look.
+  ctx.fillStyle = "#20242a";
+  ctx.fillRect(width / 2 - 30, imageBottom - 70, 60, 40);
+  ctx.beginPath();
+  ctx.arc(width / 2, imageBottom - 80, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Title + caption below, in the demotivator poster tradition.
+  const lines = text.split("\n");
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.font = "bold 30px Georgia";
+  ctx.fillText(lines[0], width / 2, imageBottom + 55);
+
+  ctx.font = "16px Georgia";
+  ctx.fillStyle = "#cfcfcf";
+  for (let i = 1; i < lines.length; i++) {
+    ctx.fillText(lines[i], width / 2, imageBottom + 85 + (i - 1) * 24);
+  }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
