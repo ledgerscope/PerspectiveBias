@@ -12,6 +12,7 @@ const PAPER_THICKNESS = 0.003;
 const HOLD_DISTANCE = 0.9; // meters in front of the camera when "held up"
 const HOLD_SCREEN_FRACTION = 0.82; // fraction of the viewport the held paper should fill
 const HOLD_SCALE_LAMBDA = 8; // ease-in/out speed for the hold scale animation
+const HOLD_MOVE_LAMBDA = 9; // ease speed for the held paper gliding to/around its target pose
 const CLICK_MAX_MOVEMENT = 6; // px - below this, a pointer up counts as a click not a drag
 
 interface PaperProps {
@@ -50,6 +51,9 @@ export function Paper({
   const meshRef = useRef<THREE.Mesh>(null);
   const visualRef = useRef<THREE.Group>(null);
   const holdScaleRef = useRef(1);
+  const heldPosRef = useRef<THREE.Vector3 | null>(null);
+  const heldQuatRef = useRef<THREE.Quaternion | null>(null);
+  const wasHeldRef = useRef(false);
   const { camera } = useThree();
 
   const texture = useMemo(() => createInvoiceTexture(layout.invoice), [layout.invoice]);
@@ -95,32 +99,59 @@ export function Paper({
     }
   });
 
-  // While held, float the paper up in front of the camera each frame, and
-  // scale it up so it reads as "held to your face" - near enough full
-  // screen - rather than a small floating card. The scale target is derived
-  // from the camera's actual FOV/aspect each frame so it fills a consistent
-  // fraction of the viewport at any window size, and eases in/out smoothly
-  // via THREE.MathUtils.damp rather than snapping.
+  // While held, glide the paper up in front of the camera each frame (rather
+  // than snapping straight there), and scale it up so it reads as "held to
+  // your face" - near enough full screen - rather than a small floating
+  // card. Position/rotation ease toward the camera-relative target via
+  // damp/slerp, starting from wherever the paper currently sits so picking
+  // it up (from the table, or mid-air after a previous hold) always glides
+  // smoothly. The scale target is derived from the camera's actual
+  // FOV/aspect each frame so it fills a consistent fraction of the viewport
+  // at any window size, and eases in/out the same way.
   useFrame((_state, delta) => {
     const body = bodyRef.current;
     if (!body) return;
     let targetScale = 1;
     if (isHeld) {
+      if (!wasHeldRef.current) {
+        // Just picked up this frame - start easing from the current pose.
+        const t = body.translation();
+        const r = body.rotation();
+        heldPosRef.current = new THREE.Vector3(t.x, t.y, t.z);
+        heldQuatRef.current = new THREE.Quaternion(r.x, r.y, r.z, r.w);
+      }
+
       const forward = new THREE.Vector3();
       camera.getWorldDirection(forward);
       const target = camera.position.clone().add(forward.multiplyScalar(HOLD_DISTANCE));
-      body.setBodyType(RigidBodyType.KinematicPositionBased, true);
-      body.setTranslation({ x: target.x, y: target.y, z: target.z }, true);
-      // Face the camera, printed side out. The invoice texture lives on the
+
+      const pos = heldPosRef.current!;
+      const quat = heldQuatRef.current!;
+      pos.set(
+        THREE.MathUtils.damp(pos.x, target.x, HOLD_MOVE_LAMBDA, delta),
+        THREE.MathUtils.damp(pos.y, target.y, HOLD_MOVE_LAMBDA, delta),
+        THREE.MathUtils.damp(pos.z, target.z, HOLD_MOVE_LAMBDA, delta),
+      );
+
+      // Face the camera, printed side out, from the paper's actual (eased)
+      // position rather than its final target, so the orientation stays
+      // correct throughout the glide. The invoice texture lives on the
       // local +Y face, but Matrix4.lookAt() orients local -Z toward the
       // look target, so rotate -90deg about local X first to remap the
       // printed (+Y) face onto that forward direction.
       const lookQuat = new THREE.Quaternion();
-      const m = new THREE.Matrix4().lookAt(camera.position, target, camera.up);
+      const m = new THREE.Matrix4().lookAt(camera.position, pos, camera.up);
       lookQuat.setFromRotationMatrix(m);
       const faceAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
       lookQuat.multiply(faceAdjust);
-      body.setRotation({ x: lookQuat.x, y: lookQuat.y, z: lookQuat.z, w: lookQuat.w }, true);
+      // Quaternion analog of damp: exponential approach toward the target
+      // rotation, frame-rate independent via the same lambda.
+      const slerpT = 1 - Math.exp(-HOLD_MOVE_LAMBDA * delta);
+      quat.slerp(lookQuat, slerpT);
+
+      body.setBodyType(RigidBodyType.KinematicPositionBased, true);
+      body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true);
+      body.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }, true);
 
       const cam = camera as THREE.PerspectiveCamera;
       if (cam.isPerspectiveCamera) {
@@ -133,6 +164,7 @@ export function Paper({
         );
       }
     }
+    wasHeldRef.current = isHeld;
     // Scale only the visual mesh group, not the RigidBody itself, so the
     // collider (used for on-table physics/collisions) stays A4-sized; the
     // held paper is fully kinematic anyway so this purely visual scale-up
