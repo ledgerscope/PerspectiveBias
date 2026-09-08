@@ -14,4 +14,14 @@ export interface Env {
    * `${request origin}/api/xero/callback` if unset.
    */
   XERO_REDIRECT_URI?: string;
+  /**
+   * Dev/debug escape hatch: when set to "true", `/api/xero/connect` never
+   * redirects to Xero and `/api/xero/invoices` always reports "not
+   * connected" without touching KV or requiring client id/secret to be
+   * configured at all. This lets local dev (and Copilot's own debugging)
+   * run entirely against the bundled offline fixture - the frontend already
+   * falls back to it automatically whenever this endpoint isn't available.
+   * Leave unset (or "false") in production so live mode works normally.
+   */
+  XERO_DISABLE_LIVE?: string;
 }

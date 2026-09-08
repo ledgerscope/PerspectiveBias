@@ -5,3 +5,10 @@
 #   wrangler secret put XERO_CLIENT_SECRET
 XERO_CLIENT_ID=your-xero-app-client-id
 XERO_CLIENT_SECRET=your-xero-app-client-secret
+
+# Set to "true" to skip Xero entirely for local dev/debugging: /api/xero/connect
+# won't redirect to Xero and /api/xero/invoices always reports "not connected",
+# so the app runs on the bundled offline fixture without needing a real client
+# id/secret or an OAuth round-trip. Remove/set to "false" to test a real
+# connection locally.
+XERO_DISABLE_LIVE=true

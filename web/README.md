@@ -52,7 +52,17 @@ If nothing is connected yet (or the Xero call fails/times out), `/api/xero/invoi
 returns a non-2xx response and the app automatically falls back to the bundled
 offline fixture - this is also the "wifi dropped" fallback path in production.
 
-### One-time setup
+### Developing/debugging without touching Xero
+
+Set `XERO_DISABLE_LIVE=true` (already the default in `.dev.vars.example`) to
+skip Xero entirely: `/api/xero/connect` won't redirect anywhere and
+`/api/xero/invoices` always reports "not connected", so the app runs purely on
+the bundled offline fixture with no client id/secret, KV namespace, or OAuth
+round-trip needed at all. This is the recommended default for local dev and
+for anyone (including Copilot) debugging the app - flip it to `false`/unset it
+only when you actually want to exercise a real Xero connection.
+
+### One-time setup (real Xero connection)
 
 1. **Create a Xero app** at the [Xero developer portal](https://developer.xero.com/app/manage)
    (an "Web app" / Auth Code Flow app), and set its redirect URI to match
@@ -73,7 +83,7 @@ offline fixture - this is also the "wifi dropped" fallback path in production.
    wrangler secret put XERO_CLIENT_SECRET
    ```
    For local `wrangler dev` runs, copy `.dev.vars.example` to `.dev.vars`
-   (gitignored) and fill in the same two values instead.
+   (gitignored), fill in the same two values, and set `XERO_DISABLE_LIVE=false`.
 5. **Deploy**, then visit `/api/xero/connect` once in a browser to complete
    the OAuth consent screen and store a token. After that, `/api/xero/invoices`
    will serve live data (refreshing the token automatically) until the Xero

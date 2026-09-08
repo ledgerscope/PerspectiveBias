@@ -50,8 +50,24 @@ function redirectUri(env: Env, requestUrl: string): string {
   return env.XERO_REDIRECT_URI || `${new URL(requestUrl).origin}/api/xero/callback`;
 }
 
+/**
+ * True when live Xero mode is deliberately disabled for this Worker (local
+ * dev / debugging) - see `Env.XERO_DISABLE_LIVE`.
+ */
+function isLiveDisabled(env: Env): boolean {
+  return env.XERO_DISABLE_LIVE === "true" || env.XERO_DISABLE_LIVE === "1";
+}
+
 /** Kicks off the OAuth2 Authorization Code flow by redirecting to Xero. */
 export async function handleConnect(request: Request, env: Env): Promise<Response> {
+  if (isLiveDisabled(env)) {
+    return new Response(
+      "Xero live mode is disabled on this Worker (XERO_DISABLE_LIVE is set) - " +
+        "the app runs entirely on the offline fixture. Unset that var to test a real connection.",
+      { status: 200 },
+    );
+  }
+
   if (!env.XERO_CLIENT_ID) {
     return new Response("XERO_CLIENT_ID is not configured on this Worker.", { status: 500 });
   }
@@ -170,6 +186,10 @@ function escapeHtml(value: string): string {
 
 /** Reports whether an OAuth connection has been established (no secrets returned). */
 export async function handleStatus(env: Env): Promise<Response> {
+  if (isLiveDisabled(env)) {
+    return Response.json({ connected: false, liveDisabled: true });
+  }
+
   const raw = await env.XERO_TOKENS.get(TOKENS_KEY);
   if (!raw) {
     return Response.json({ connected: false });
@@ -288,6 +308,14 @@ function toInvoice(raw: XeroInvoice): Invoice {
 
 /** Fetches the most recent invoices from the connected Xero org. */
 export async function handleInvoices(env: Env): Promise<Response> {
+  if (isLiveDisabled(env)) {
+    return new Response(
+      "Xero live mode is disabled on this Worker (XERO_DISABLE_LIVE is set) - " +
+        "falling back to the offline fixture.",
+      { status: 404 },
+    );
+  }
+
   const tokens = await getValidTokens(env);
   if (!tokens) {
     return new Response(
