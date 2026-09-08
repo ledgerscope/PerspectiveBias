@@ -5,7 +5,7 @@
 A fun, web-based 3D visualization tool for accounting data. The user is
 dropped into a virtual office cubicle: a photo-covered cubicle wall behind a
 desk, with a table covered in A4 "invoice" papers pulled from Xero. Invoices
-are physical, interactive objects the user can paw through by hand.
+are physical, interactive objects the user can paw through by hand..
 
 ## Interaction Model
 
