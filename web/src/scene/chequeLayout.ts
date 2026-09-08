@@ -97,14 +97,18 @@ export interface ChequeLayout {
 
 const PAPER_HEIGHT_ABOVE_TABLE = 0.006;
 
+// Cheque half-diagonal (CHEQUE_WIDTH x CHEQUE_HEIGHT) - same reasoning as
+// layout.ts's invoice margin, just smaller since cheques are much slimmer.
+const CHEQUE_CLEARANCE_MARGIN = 0.09;
+
 /** Scatters cheques individually across the desk, away from the invoice stacks. */
 export function generateChequeLayout(cheques: Cheque[]): ChequeLayout[] {
   return cheques.map((cheque, i) => {
     const rand = rngFromString(`${cheque.id}-layout-${i}`);
-    const [x, z] = resolveClearXZ(() => [
-      (rand() - 0.5) * (TABLE_DIMENSIONS.width - 0.5),
-      (rand() - 0.5) * (TABLE_DIMENSIONS.depth - 0.5),
-    ]);
+    const [x, z] = resolveClearXZ(
+      () => [(rand() - 0.5) * (TABLE_DIMENSIONS.width - 0.5), (rand() - 0.5) * (TABLE_DIMENSIONS.depth - 0.5)],
+      CHEQUE_CLEARANCE_MARGIN,
+    );
     return {
       id: cheque.id,
       cheque,

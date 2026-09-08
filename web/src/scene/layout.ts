@@ -8,7 +8,11 @@ export interface PaperLayout {
   rotation: [number, number, number];
 }
 
-const TABLE_WIDTH = 3.6; // meters, roughly desk-sized
+const TABLE_WIDTH = 2.6; // meters - narrow enough that its edges sit inside the
+// default camera framing, so a held invoice (which floats at a fixed
+// offset in front of the camera, not at a desk-relative position) can end
+// up hanging past the desk's edge over open floor until the camera is
+// panned to bring that part of the desk into view underneath it.
 const TABLE_DEPTH = 2.0;
 const TABLE_HEIGHT = 0.9; // y of the desk's centerline (legs support up to here)
 const TABLE_THICKNESS = 0.06;
@@ -35,6 +39,11 @@ function seededRandom(seed: number) {
 const STACKED_INVOICE_COUNT = 20;
 const STACK_COUNT = 2;
 
+// Roughly an A4 sheet's half-diagonal (0.21 x 0.297) - used so a scattered
+// invoice's *centre* being just outside the tool-cluster radius doesn't
+// still let a corner reach in and visually clip through the stamp/stapler.
+const INVOICE_CLEARANCE_MARGIN = 0.19;
+
 /**
  * Lays invoices out across the table: the first `STACKED_INVOICE_COUNT`
  * invoices form `STACK_COUNT` neat stacks (slight vertical offset + tight
@@ -55,10 +64,10 @@ export function generateInitialLayout(invoices: Invoice[]): PaperLayout[] {
   for (let s = 0; s < stackCount; s++) {
     const stackSize = baseStackSize + (extra > 0 ? 1 : 0);
     if (extra > 0) extra--;
-    const [cx, cz] = resolveClearXZ(() => [
-      (rand() - 0.5) * (TABLE_WIDTH - 0.6),
-      (rand() - 0.5) * (TABLE_DEPTH - 0.6),
-    ]);
+    const [cx, cz] = resolveClearXZ(
+      () => [(rand() - 0.5) * (TABLE_WIDTH - 0.6), (rand() - 0.5) * (TABLE_DEPTH - 0.6)],
+      INVOICE_CLEARANCE_MARGIN,
+    );
     const baseRotY = rand() * Math.PI * 2;
     for (let p = 0; p < stackSize && idx < invoices.length; p++, idx++) {
       const invoice = invoices[idx];
@@ -77,10 +86,10 @@ export function generateInitialLayout(invoices: Invoice[]): PaperLayout[] {
 
   for (; idx < invoices.length; idx++) {
     const invoice = invoices[idx];
-    const [x, z] = resolveClearXZ(() => [
-      (rand() - 0.5) * (TABLE_WIDTH - 0.4),
-      (rand() - 0.5) * (TABLE_DEPTH - 0.4),
-    ]);
+    const [x, z] = resolveClearXZ(
+      () => [(rand() - 0.5) * (TABLE_WIDTH - 0.4), (rand() - 0.5) * (TABLE_DEPTH - 0.4)],
+      INVOICE_CLEARANCE_MARGIN,
+    );
     layouts.push({
       id: invoice.id,
       invoice,

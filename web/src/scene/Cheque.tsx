@@ -19,7 +19,7 @@ const SELECTED_SCREEN_FRACTION = 0.34; // smaller than a fully-held invoice - it
 const SELECTED_SCALE_LAMBDA = 8;
 const SELECTED_MOVE_LAMBDA = 9;
 const CLICK_MAX_MOVEMENT = 6; // px
-const GLOW_COLOR = new THREE.Color("#2ecc71");
+const GLOW_COLOR = new THREE.Color("#0a6b2b");
 // Floating/stapling cheques sit this much closer to the camera than the
 // invoice's own hold plane, so they always render visibly in front of it
 // rather than co-planar (which could look tucked behind depending on draw
@@ -69,6 +69,8 @@ export function Cheque({
 }: ChequeProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const visualRef = useRef<THREE.Group>(null);
+  const baseMeshRef = useRef<THREE.Mesh>(null);
+  const faceMeshRef = useRef<THREE.Mesh>(null);
   const baseMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const faceMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const floatScaleRef = useRef(1);
@@ -79,7 +81,6 @@ export function Cheque({
   const staplingElapsedRef = useRef(0);
   const staplingStartPosRef = useRef<THREE.Vector3 | null>(null);
   const staplingStartQuatRef = useRef<THREE.Quaternion | null>(null);
-  const glowClockRef = useRef(0);
   const { camera } = useThree();
 
   const texture = useMemo(() => createChequeTexture(layout.cheque), [layout.cheque]);
@@ -129,25 +130,41 @@ export function Cheque({
     const body = bodyRef.current;
     if (!body) return;
 
-    // Glow pulse while this cheque matches the held invoice but hasn't been
-    // pulled up yet - a gentle emissive breathing effect to draw the eye.
+    // Solid glow (no pulsing) while this cheque matches the held invoice
+    // but hasn't been pulled up yet - a dark, saturated green that stays
+    // constant so it reads clearly against the desk clutter instead of a
+    // brighter but pulsing tint that was easy to miss.
     // Applied to *both* materials: the printed face (what the camera
     // actually sees from above - the plane sits right on top of the box and
     // fully occludes it) and the underlying box (visible edge-on / from
     // below), so the glow reads correctly from any angle.
     const targetIntensity = matches && !isSelected ? 1 : 0;
-    if (targetIntensity > 0) glowClockRef.current += delta;
-    // Brighter, more saturated pulse (was 0.35-0.70, hard to notice against
-    // the desk clutter) so a matching cheque unmistakably reads as glowing.
-    const pulse = 0.9 + 0.7 * (0.5 + 0.5 * Math.sin(glowClockRef.current * 4));
     for (const material of [baseMaterialRef.current, faceMaterialRef.current]) {
       if (!material) continue;
       if (targetIntensity > 0) {
         material.emissive.copy(GLOW_COLOR);
-        material.emissiveIntensity = pulse;
+        material.emissiveIntensity = 1.4;
       } else {
         material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, 0, 10, delta);
       }
+    }
+
+    // While floating up beside/onto the held invoice (selected or mid-staple
+    // rotation), the cheque's camera-facing plane and the invoice's own
+    // camera-facing plane are only near-parallel (each independently "looks
+    // at" the camera from a slightly different lateral offset), not exactly
+    // coplanar - a small lookAt tilt that the flat forward-offset alone
+    // doesn't reliably outrun once the two overlap on screen (e.g. tucked
+    // into the invoice's corner while stapling). Skipping the depth test and
+    // forcing a high render order for as long as it needs to visually sit
+    // "on top" guarantees it never gets clipped by the invoice underneath,
+    // regardless of the exact tilt at any given frame.
+    const forceOnTop = isSelected || isStapling;
+    for (const mesh of [baseMeshRef.current, faceMeshRef.current]) {
+      if (mesh) mesh.renderOrder = forceOnTop ? 10 : 0;
+    }
+    for (const material of [baseMaterialRef.current, faceMaterialRef.current]) {
+      if (material) material.depthTest = !forceOnTop;
     }
 
     let targetScale = 1;
@@ -344,6 +361,7 @@ export function Cheque({
     >
       <group ref={visualRef}>
         <mesh
+          ref={baseMeshRef}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -353,7 +371,7 @@ export function Cheque({
           <boxGeometry args={[CHEQUE_WIDTH, CHEQUE_THICKNESS, CHEQUE_HEIGHT]} />
           <meshStandardMaterial ref={baseMaterialRef} color={baseColor} roughness={0.85} />
         </mesh>
-        <mesh position={[0, CHEQUE_THICKNESS / 2 + 0.0003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh ref={faceMeshRef} position={[0, CHEQUE_THICKNESS / 2 + 0.0003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[CHEQUE_WIDTH, CHEQUE_HEIGHT]} />
           <meshStandardMaterial ref={faceMaterialRef} map={texture} roughness={0.85} />
         </mesh>
