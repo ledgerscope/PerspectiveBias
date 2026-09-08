@@ -41,6 +41,39 @@ included in this prototype; without it the app runs entirely on the bundled
 offline fixture, which is by design (this is also the "wifi dropped"
 fallback path).
 
+## Cloudflare Worker deployment
+
+This app is configured to deploy as a Cloudflare Worker (static assets) named
+`perspectivebias`, using [`wrangler.jsonc`](./wrangler.jsonc):
+
+```bash
+npm run build       # produces the static site in dist/
+npm run deploy      # builds, then runs `wrangler deploy`
+npm run cf:dev       # builds, then runs `wrangler dev` for a local Worker preview
+```
+
+`wrangler deploy` requires Cloudflare credentials in the environment (e.g. a
+`CLOUDFLARE_API_TOKEN` with Workers deploy permissions, plus `CLOUDFLARE_ACCOUNT_ID`
+if the account isn't already selected), or being logged in via `wrangler login`.
+The Worker serves `dist/` as static assets with `not_found_handling` set to
+`single-page-application`, so unmatched routes fall back to `index.html`.
+
+### Troubleshooting: `Missing entry-point to Worker script or to assets directory`
+
+`wrangler.jsonc` and the build output (`dist/`) live in this `web/` directory,
+not the repo root. If `wrangler deploy` runs from the repo root (or any
+directory other than `web/`), it won't find this config, falls back to
+guessing a project setup, and fails with this error. If you're deploying via
+Cloudflare's dashboard Git integration (Workers Builds) for the
+`perspectivebias` Worker, make sure **Settings > Build** has:
+
+- **Root directory**: `web`
+- **Build command**: `npm run build`
+- **Deploy command**: `npx wrangler deploy`
+
+If invoking `wrangler` manually or from a script, either `cd web` first or
+pass `--config web/wrangler.jsonc`.
+
 ## Project structure
 
 ```
