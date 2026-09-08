@@ -1,26 +1,30 @@
 import { useRef } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { getHeldTargetPosition } from "./holdTarget";
+import { getHeldTargetPosition, HELD_LEFT_OFFSET } from "./holdTarget";
 
 const APPEAR_LAMBDA = 10;
 const CHOMP_DURATION = 0.28;
 
 interface StaplerToolProps {
-  /** Whether an invoice + at least one cheque are currently selected. */
+  /** Whether the stapler prop is rendered on the desk at all. */
   visible: boolean;
+  /** Whether an invoice + at least one cheque are currently selected, so clicking actually does something. */
+  enabled: boolean;
   homePosition: [number, number, number];
   /** Called once, right as the jaw closes, with the world position the bundle should fly from. */
   onStaple: (startPosition: [number, number, number]) => void;
+  /** Uniform size multiplier on top of the base model, so it reads as "big". */
+  scale?: number;
 }
 
 /**
- * The big red stapler prop. Appears alongside the stamp once an invoice and
- * a matching cheque are selected. Clicking it "chomps" (a quick jaw
- * animation) and staples the selected cheque(s) to the held invoice, which
- * then float off into the payments tray.
+ * The big red stapler prop. Sits on the desk at all times, next to the
+ * stamp. Clicking it only "chomps" (a quick jaw animation) and staples the
+ * selected cheque(s) to the held invoice once an invoice and a matching
+ * cheque are selected - otherwise the click is a no-op.
  */
-export function StaplerTool({ visible, homePosition, onStaple }: StaplerToolProps) {
+export function StaplerTool({ visible, enabled, homePosition, onStaple, scale = 1 }: StaplerToolProps) {
   const groupRef = useRef<THREE.Group>(null);
   const jawRef = useRef<THREE.Group>(null);
   const appearScaleRef = useRef(0);
@@ -35,7 +39,7 @@ export function StaplerTool({ visible, homePosition, onStaple }: StaplerToolProp
     if (!group) return;
     const targetAppear = visible ? 1 : 0;
     appearScaleRef.current = THREE.MathUtils.damp(appearScaleRef.current, targetAppear, APPEAR_LAMBDA, delta);
-    group.scale.setScalar(Math.max(appearScaleRef.current, 0.0001));
+    group.scale.setScalar(Math.max(appearScaleRef.current, 0.0001) * scale);
 
     const jaw = jawRef.current;
     if (jaw) {
@@ -69,8 +73,8 @@ export function StaplerTool({ visible, homePosition, onStaple }: StaplerToolProp
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    if (!visible || chompingRef.current) return;
-    const target = getHeldTargetPosition(camera);
+    if (!enabled || chompingRef.current) return;
+    const target = getHeldTargetPosition(camera, HELD_LEFT_OFFSET, 0);
     flightStartRef.current = [target.x, target.y, target.z];
     chompingRef.current = true;
     chompTimeRef.current = 0;

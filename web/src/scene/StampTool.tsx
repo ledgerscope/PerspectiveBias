@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { getHeldTargetPosition } from "./holdTarget";
+import { getHeldTargetPosition, HELD_LEFT_OFFSET } from "./holdTarget";
 
 const APPEAR_LAMBDA = 10;
 const TRAVEL_DURATION = 0.45; // seconds, desk -> invoice
@@ -11,21 +11,25 @@ const RETURN_DURATION = 0.45; // seconds, invoice -> desk
 type Phase = "idle" | "toInvoice" | "impact" | "returning";
 
 interface StampToolProps {
-  /** Whether an invoice + at least one cheque are currently selected. */
+  /** Whether the stamp prop is rendered on the desk at all. */
   visible: boolean;
+  /** Whether an invoice + at least one cheque are currently selected, so clicking actually does something. */
+  enabled: boolean;
   /** Desk-relative resting spot. */
   homePosition: [number, number, number];
   /** Called the instant the stamp touches the held invoice. */
   onApplyStamp: () => void;
+  /** Uniform size multiplier on top of the base model, so it reads as "big". */
+  scale?: number;
 }
 
 /**
- * The green rubber stamp prop. Pops onto the desk once an invoice and a
- * matching cheque are both selected; clicking it animates the stamp from
- * its desk spot onto the currently-held invoice and back, applying a green
- * "PAID" mark at the moment of impact.
+ * The green rubber stamp prop. Sits on the desk at all times; clicking it
+ * only animates from its desk spot onto the currently-held invoice and back
+ * (applying a green "PAID" mark at the moment of impact) once an invoice and
+ * a matching cheque are both selected - otherwise the click is a no-op.
  */
-export function StampTool({ visible, homePosition, onApplyStamp }: StampToolProps) {
+export function StampTool({ visible, enabled, homePosition, onApplyStamp, scale = 1 }: StampToolProps) {
   const groupRef = useRef<THREE.Group>(null);
   const appearScaleRef = useRef(0);
   const phaseRef = useRef<Phase>("idle");
@@ -39,7 +43,7 @@ export function StampTool({ visible, homePosition, onApplyStamp }: StampToolProp
 
     const targetAppear = visible ? 1 : 0;
     appearScaleRef.current = THREE.MathUtils.damp(appearScaleRef.current, targetAppear, APPEAR_LAMBDA, delta);
-    group.scale.setScalar(Math.max(appearScaleRef.current, 0.0001));
+    group.scale.setScalar(Math.max(appearScaleRef.current, 0.0001) * scale);
 
     const home = new THREE.Vector3(...homePosition);
     const phase = phaseRef.current;
@@ -52,7 +56,7 @@ export function StampTool({ visible, homePosition, onApplyStamp }: StampToolProp
       if (phase === "toInvoice") {
         const t = Math.min(1, phaseTimeRef.current / TRAVEL_DURATION);
         const eased = 1 - Math.pow(1 - t, 3);
-        const target = getHeldTargetPosition(camera, -0.05, -0.02);
+        const target = getHeldTargetPosition(camera, HELD_LEFT_OFFSET - 0.05, -0.02);
         posRef.current.lerpVectors(home, target, eased);
         group.rotation.x = -eased * 0.5; // tip forward as it presses in
         if (t >= 1) {
@@ -69,7 +73,7 @@ export function StampTool({ visible, homePosition, onApplyStamp }: StampToolProp
       } else if (phase === "returning") {
         const t = Math.min(1, phaseTimeRef.current / RETURN_DURATION);
         const eased = t * t * (3 - 2 * t);
-        const target = getHeldTargetPosition(camera, -0.05, -0.02);
+        const target = getHeldTargetPosition(camera, HELD_LEFT_OFFSET - 0.05, -0.02);
         posRef.current.lerpVectors(target, home, eased);
         group.rotation.x = -0.5 * (1 - eased);
         if (t >= 1) {
@@ -84,7 +88,7 @@ export function StampTool({ visible, homePosition, onApplyStamp }: StampToolProp
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    if (!visible || phaseRef.current !== "idle") return;
+    if (!enabled || phaseRef.current !== "idle") return;
     phaseRef.current = "toInvoice";
     phaseTimeRef.current = 0;
   };

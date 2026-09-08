@@ -5,12 +5,9 @@ import { RigidBodyType } from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
 import type { PaperLayout } from "./layout";
 import { createInvoiceTexture } from "./textureUtils";
-import { HOLD_DISTANCE, getHeldTargetPosition } from "./holdTarget";
+import { HOLD_DISTANCE, HELD_LEFT_OFFSET, A4_WIDTH, A4_HEIGHT, HOLD_SCREEN_FRACTION, getHeldTargetPosition } from "./holdTarget";
 
-const A4_WIDTH = 0.21;
-const A4_HEIGHT = 0.297;
 const PAPER_THICKNESS = 0.003;
-const HOLD_SCREEN_FRACTION = 0.82; // fraction of the viewport the held paper should fill
 const HOLD_SCALE_LAMBDA = 8; // ease-in/out speed for the hold scale animation
 const HOLD_MOVE_LAMBDA = 9; // ease speed for the held paper gliding to/around its target pose
 const CLICK_MAX_MOVEMENT = 6; // px - below this, a pointer up counts as a click not a drag
@@ -128,7 +125,7 @@ export function Paper({
         heldQuatRef.current = new THREE.Quaternion(r.x, r.y, r.z, r.w);
       }
 
-      const target = getHeldTargetPosition(camera);
+      const target = getHeldTargetPosition(camera, HELD_LEFT_OFFSET, 0);
 
       const pos = heldPosRef.current!;
       const quat = heldQuatRef.current!;

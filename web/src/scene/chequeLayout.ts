@@ -1,6 +1,7 @@
 import type { Cheque, Invoice } from "../xero/types";
 import { rngFromString } from "./hash";
 import { TABLE_DIMENSIONS } from "./layout";
+import { resolveClearXZ } from "./toolZone";
 
 // Real-world personal/business cheques are long and narrow (~6in x 2.75in),
 // nothing like A4 - roughly a 2.2:1 landscape strip.
@@ -32,12 +33,15 @@ export function generateCheques(invoices: Invoice[]): Cheque[] {
   const cheques: Cheque[] = [];
 
   for (const invoice of invoices) {
-    if (invoice.status === "PAID" || invoice.status === "VOIDED") continue;
+    if (invoice.status === "VOIDED") continue;
     const rand = rngFromString(`${invoice.id}-cheque`);
-    // Roughly half of the eligible (unpaid) invoices get a cheque sitting
-    // on the desk waiting to be matched/stapled; the rest are still
-    // "awaiting payment" with nothing to reconcile yet.
-    if (rand() >= 0.55) continue;
+    const isPaid = invoice.status === "PAID";
+    // Roughly half of the *unpaid* invoices get a cheque sitting on the desk
+    // waiting to be matched/stapled; the rest are still "awaiting payment"
+    // with nothing to reconcile yet. A PAID invoice, by definition, was
+    // already settled by a cheque, so it always gets one (or a split pair)
+    // - there's no such thing as a paid invoice with no payment behind it.
+    if (!isPaid && rand() >= 0.55) continue;
 
     const bank = `${BANK_WORDS_A[Math.floor(rand() * BANK_WORDS_A.length)]} ${
       BANK_WORDS_B[Math.floor(rand() * BANK_WORDS_B.length)]
@@ -97,14 +101,14 @@ const PAPER_HEIGHT_ABOVE_TABLE = 0.006;
 export function generateChequeLayout(cheques: Cheque[]): ChequeLayout[] {
   return cheques.map((cheque, i) => {
     const rand = rngFromString(`${cheque.id}-layout-${i}`);
+    const [x, z] = resolveClearXZ(() => [
+      (rand() - 0.5) * (TABLE_DIMENSIONS.width - 0.5),
+      (rand() - 0.5) * (TABLE_DIMENSIONS.depth - 0.5),
+    ]);
     return {
       id: cheque.id,
       cheque,
-      position: [
-        (rand() - 0.5) * (TABLE_DIMENSIONS.width - 0.5),
-        PAPER_HEIGHT_ABOVE_TABLE + rand() * 0.01,
-        (rand() - 0.5) * (TABLE_DIMENSIONS.depth - 0.5),
-      ],
+      position: [x, PAPER_HEIGHT_ABOVE_TABLE + rand() * 0.01, z],
       rotation: [0, rand() * Math.PI * 2, 0],
     };
   });

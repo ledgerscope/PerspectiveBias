@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import { OrbitControls } from "@react-three/drei";
@@ -17,16 +17,17 @@ import { useInvoices } from "./useInvoices";
 import { useResetOnSpace } from "./useResetOnSpace";
 import { getReferenceDate } from "./dateUtils";
 import { rngFromString } from "./hash";
+import { TRAY_XZ, STAMP_XZ, STAPLER_XZ } from "./toolZone";
+import { STAPLE_ANIM_DURATION } from "./Cheque";
 import { StatusOverlay } from "../components/StatusOverlay";
 
-// Fixed desk spots for the reconciliation tools. The stamp/stapler sit just
-// outside the footprint of a held invoice (which fills most of the center of
-// the view) but still safely inside the *default*, un-orbited camera frustum,
-// since a user who hasn't yet panned/orbited around still needs to be able to
-// reach them the first time an invoice is held.
-const TRAY_POSITION: [number, number, number] = [1.5, TABLE_DIMENSIONS.surfaceY + 0.006, 0.55];
-const STAMP_HOME: [number, number, number] = [1.15, TABLE_DIMENSIONS.surfaceY + 0.05, 0.15];
-const STAPLER_HOME: [number, number, number] = [-1.1, TABLE_DIMENSIONS.surfaceY + 0.02, 0.15];
+// Fixed desk spots for the reconciliation tools, all clustered together near
+// one front corner of the desk (see toolZone.ts, which scattered/stacked
+// paperwork is kept clear of) so the tray, stamp and stapler are easy to
+// find and reach together once an invoice is held.
+const TRAY_POSITION: [number, number, number] = [TRAY_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.006, TRAY_XZ[1]];
+const STAMP_HOME: [number, number, number] = [STAMP_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.05, STAMP_XZ[1]];
+const STAPLER_HOME: [number, number, number] = [STAPLER_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.02, STAPLER_XZ[1]];
 
 interface StapledBundleData {
   id: string;
@@ -45,6 +46,17 @@ export function Scene() {
   const [archivedChequeIds, setArchivedChequeIds] = useState<Set<string>>(new Set());
   const [bundles, setBundles] = useState<StapledBundleData[]>([]);
   const bundleCountRef = useRef(0);
+  // Cheque ids currently mid-way through the "being stapled" animation
+  // (rotating to vertical + snapping to the invoice's top-left corner)
+  // before they're archived and the fly-to-tray bundle takes over.
+  const [staplingChequeIds, setStaplingChequeIds] = useState<string[]>([]);
+  const staplingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (staplingTimeoutRef.current) clearTimeout(staplingTimeoutRef.current);
+    };
+  }, []);
 
   // Picking up a different invoice (or dropping the current one) always
   // clears any cheques that were floated up to sit beside it.
@@ -75,6 +87,43 @@ export function Scene() {
   const chequeLayouts = useMemo(() => generateChequeLayout(cheques), [cheques]);
   const invoiceById = useMemo(() => new Map(invoices.map((inv) => [inv.id, inv])), [invoices]);
 
+  // Invoices that are already PAID start the scene pre-reconciled: their
+  // cheque(s) are already stapled on and resting in the payments tray,
+  // rather than loose on the desk waiting to be matched up - there's
+  // nothing left to do for money that's already been recorded as settled.
+  const preStapledInvoiceIds = useMemo(
+    () => new Set(invoices.filter((inv) => inv.status === "PAID").map((inv) => inv.id)),
+    [invoices],
+  );
+  const preStapledBundles = useMemo(() => {
+    const chequesByInvoice = new Map<string, string[]>();
+    for (const cheque of cheques) {
+      if (!preStapledInvoiceIds.has(cheque.invoiceId)) continue;
+      const list = chequesByInvoice.get(cheque.invoiceId) ?? [];
+      list.push(cheque.id);
+      chequesByInvoice.set(cheque.invoiceId, list);
+    }
+    return Array.from(chequesByInvoice.entries()).map(([invoiceId, chequeIds], index) => {
+      const jitter = rngFromString(`tray-preexisting-${invoiceId}`);
+      const position: [number, number, number] = [
+        TRAY_POSITION[0] + (jitter() - 0.5) * 0.08,
+        TRAY_POSITION[1] + 0.01 + index * 0.006,
+        TRAY_POSITION[2] + (jitter() - 0.5) * 0.06,
+      ];
+      return { invoiceId, chequeIds, position };
+    });
+  }, [cheques, preStapledInvoiceIds]);
+  const preStapledChequeIds = useMemo(
+    () => new Set(preStapledBundles.flatMap((b) => b.chequeIds)),
+    [preStapledBundles],
+  );
+  // Future (user-triggered) staples index their tray slot after however many
+  // are already sitting there from the pre-reconciled invoices, so they
+  // don't stack into the same spots.
+  useEffect(() => {
+    bundleCountRef.current = Math.max(bundleCountRef.current, preStapledBundles.length);
+  }, [preStapledBundles.length]);
+
   const handleToggleChequeSelect = useCallback((chequeId: string) => {
     setSelectedChequeIds((prev) =>
       prev.includes(chequeId) ? prev.filter((id) => id !== chequeId) : [...prev, chequeId],
@@ -82,16 +131,20 @@ export function Scene() {
   }, []);
 
   const heldInvoice = heldId ? invoiceById.get(heldId) ?? null : null;
-  // The stamp + stapler appear once an invoice awaiting payment has at least
-  // one matching cheque pulled up alongside it - there's nothing to
-  // reconcile for an invoice that's already settled/void. The stapler stays
-  // available even after the invoice has been manually stamped PAID (that's
-  // the whole point - stamp it, then staple the cheque(s) to it and send the
-  // bundle to the tray); only the stamp itself hides once used, so you can't
-  // stack multiple PAID marks on the same invoice.
+  // The stamp + stapler stay visible on the desk at all times so they're
+  // easy to find, but only *do* anything once an invoice awaiting payment
+  // has at least one matching cheque pulled up alongside it - there's
+  // nothing to reconcile for an invoice that's already settled/void, or
+  // while a previous staple's "being stapled" animation is still playing.
+  // The stapler stays enabled even after the invoice has been manually
+  // stamped PAID (that's the whole point - stamp it, then staple the
+  // cheque(s) to it and send the bundle to the tray); only the stamp itself
+  // disables once used, so you can't stack multiple PAID marks on one
+  // invoice.
   const canReconcile =
     !!heldInvoice &&
     selectedChequeIds.length > 0 &&
+    staplingChequeIds.length === 0 &&
     heldInvoice.status !== "PAID" &&
     heldInvoice.status !== "VOIDED";
   const canStamp = canReconcile && !manuallyPaidIds.has(heldInvoice!.id);
@@ -107,30 +160,37 @@ export function Scene() {
 
   const handleStaple = useCallback(
     (startPosition: [number, number, number]) => {
-      if (!heldId || selectedChequeIds.length === 0) return;
-      const invoice = invoiceById.get(heldId);
-      if (!invoice) return;
+      if (!heldId || selectedChequeIds.length === 0 || staplingChequeIds.length > 0) return;
+      const invoiceId = heldId;
       const chequeIds = selectedChequeIds;
-      const index = bundleCountRef.current++;
-      const jitter = rngFromString(`tray-${index}`);
-      const endPosition: [number, number, number] = [
-        TRAY_POSITION[0] + (jitter() - 0.5) * 0.08,
-        TRAY_POSITION[1] + 0.01 + index * 0.006,
-        TRAY_POSITION[2] + (jitter() - 0.5) * 0.06,
-      ];
-      setBundles((prev) => [
-        ...prev,
-        { id: `bundle-${heldId}`, invoiceId: heldId, chequeIds, startPosition, endPosition },
-      ]);
-      setArchivedInvoiceIds((prev) => new Set(prev).add(heldId));
-      setArchivedChequeIds((prev) => {
-        const next = new Set(prev);
-        chequeIds.forEach((id) => next.add(id));
-        return next;
-      });
-      setHeldId(null);
+      // First, play the "being stapled" animation (the cheque(s) rotate to
+      // vertical and snap to the invoice's top-left corner) for a beat
+      // before the invoice+cheques actually get archived and fly off to
+      // the tray - see Cheque.tsx's isStapling handling.
+      setStaplingChequeIds(chequeIds);
+      staplingTimeoutRef.current = setTimeout(() => {
+        const index = bundleCountRef.current++;
+        const jitter = rngFromString(`tray-${index}`);
+        const endPosition: [number, number, number] = [
+          TRAY_POSITION[0] + (jitter() - 0.5) * 0.08,
+          TRAY_POSITION[1] + 0.01 + index * 0.006,
+          TRAY_POSITION[2] + (jitter() - 0.5) * 0.06,
+        ];
+        setBundles((prev) => [
+          ...prev,
+          { id: `bundle-${invoiceId}`, invoiceId, chequeIds, startPosition, endPosition },
+        ]);
+        setArchivedInvoiceIds((prev) => new Set(prev).add(invoiceId));
+        setArchivedChequeIds((prev) => {
+          const next = new Set(prev);
+          chequeIds.forEach((id) => next.add(id));
+          return next;
+        });
+        setStaplingChequeIds([]);
+        setHeldId(null);
+      }, STAPLE_ANIM_DURATION * 1000);
     },
-    [heldId, selectedChequeIds, invoiceById, setHeldId],
+    [heldId, selectedChequeIds, staplingChequeIds.length, setHeldId],
   );
 
   return (
@@ -151,7 +211,7 @@ export function Scene() {
           <RotaryPhone />
           <PaymentsTray position={TRAY_POSITION} />
           {layouts
-            .filter((layout) => !archivedInvoiceIds.has(layout.id))
+            .filter((layout) => !archivedInvoiceIds.has(layout.id) && !preStapledInvoiceIds.has(layout.id))
             .map((layout) => (
               <Paper
                 key={layout.id}
@@ -166,13 +226,14 @@ export function Scene() {
               />
             ))}
           {chequeLayouts
-            .filter((cl) => !archivedChequeIds.has(cl.id))
+            .filter((cl) => !archivedChequeIds.has(cl.id) && !preStapledChequeIds.has(cl.id))
             .map((cl) => (
               <Cheque
                 key={cl.id}
                 layout={cl}
                 heldInvoiceId={heldId}
                 isSelected={selectedChequeIds.includes(cl.id)}
+                isStapling={staplingChequeIds.includes(cl.id)}
                 selectedIndex={Math.max(0, selectedChequeIds.indexOf(cl.id))}
                 onToggleSelect={handleToggleChequeSelect}
                 resetToken={resetToken}
@@ -180,6 +241,18 @@ export function Scene() {
                 onDragStateChange={handleDragStateChange}
               />
             ))}
+          {preStapledBundles.map((bundle) => (
+            <StapledBundle
+              key={`bundle-preexisting-${bundle.invoiceId}`}
+              id={`bundle-preexisting-${bundle.invoiceId}`}
+              invoice={invoiceById.get(bundle.invoiceId)!}
+              referenceDate={referenceDate}
+              startPosition={bundle.position}
+              endPosition={bundle.position}
+              chequeCount={bundle.chequeIds.length}
+              instant
+            />
+          ))}
           {bundles.map((bundle) => (
             <StapledBundle
               key={bundle.id}
@@ -191,8 +264,20 @@ export function Scene() {
               chequeCount={bundle.chequeIds.length}
             />
           ))}
-          <StampTool visible={canStamp} homePosition={STAMP_HOME} onApplyStamp={handleApplyStamp} />
-          <StaplerTool visible={canReconcile} homePosition={STAPLER_HOME} onStaple={handleStaple} />
+          <StampTool
+            visible
+            enabled={canStamp}
+            homePosition={STAMP_HOME}
+            onApplyStamp={handleApplyStamp}
+            scale={1.7}
+          />
+          <StaplerTool
+            visible
+            enabled={canReconcile}
+            homePosition={STAPLER_HOME}
+            onStaple={handleStaple}
+            scale={1.9}
+          />
         </Physics>
         <OrbitControls
           enabled={!isDraggingPaper}

@@ -1,4 +1,5 @@
 import type { Invoice } from "../xero/types";
+import { resolveClearXZ } from "./toolZone";
 
 export interface PaperLayout {
   id: string;
@@ -54,8 +55,10 @@ export function generateInitialLayout(invoices: Invoice[]): PaperLayout[] {
   for (let s = 0; s < stackCount; s++) {
     const stackSize = baseStackSize + (extra > 0 ? 1 : 0);
     if (extra > 0) extra--;
-    const cx = (rand() - 0.5) * (TABLE_WIDTH - 0.6);
-    const cz = (rand() - 0.5) * (TABLE_DEPTH - 0.6);
+    const [cx, cz] = resolveClearXZ(() => [
+      (rand() - 0.5) * (TABLE_WIDTH - 0.6),
+      (rand() - 0.5) * (TABLE_DEPTH - 0.6),
+    ]);
     const baseRotY = rand() * Math.PI * 2;
     for (let p = 0; p < stackSize && idx < invoices.length; p++, idx++) {
       const invoice = invoices[idx];
@@ -74,14 +77,14 @@ export function generateInitialLayout(invoices: Invoice[]): PaperLayout[] {
 
   for (; idx < invoices.length; idx++) {
     const invoice = invoices[idx];
+    const [x, z] = resolveClearXZ(() => [
+      (rand() - 0.5) * (TABLE_WIDTH - 0.4),
+      (rand() - 0.5) * (TABLE_DEPTH - 0.4),
+    ]);
     layouts.push({
       id: invoice.id,
       invoice,
-      position: [
-        (rand() - 0.5) * (TABLE_WIDTH - 0.4),
-        PAPER_HEIGHT_ABOVE_TABLE + rand() * 0.01,
-        (rand() - 0.5) * (TABLE_DEPTH - 0.4),
-      ],
+      position: [x, PAPER_HEIGHT_ABOVE_TABLE + rand() * 0.01, z],
       rotation: [0, rand() * Math.PI * 2, 0],
     });
   }

@@ -17,6 +17,13 @@ interface StapledBundleProps {
   /** Absolute world position (inside the tray) the bundle settles at, already offset per stack index. */
   endPosition: [number, number, number];
   chequeCount: number;
+  /**
+   * Skips the fly-in animation and renders already resting in its final
+   * tray position/orientation - used for invoices that were already PAID
+   * when the scene loaded, so they appear pre-reconciled (cheque(s) already
+   * stapled on and filed away) rather than animating in from nowhere.
+   */
+  instant?: boolean;
 }
 
 /**
@@ -32,16 +39,21 @@ export function StapledBundle({
   startPosition,
   endPosition,
   chequeCount,
+  instant = false,
 }: StapledBundleProps) {
   const groupRef = useRef<THREE.Group>(null);
   const startRef = useRef(new THREE.Vector3(...startPosition));
   const endRef = useRef(new THREE.Vector3(...endPosition));
-  const elapsedRef = useRef(0);
+  const elapsedRef = useRef(instant ? FLIGHT_DURATION : 0);
   const texture = useMemo(
     () => createInvoiceTexture(invoice, referenceDate, true),
     [invoice, referenceDate],
   );
   const restRotationY = useMemo(() => (rngFromString(`${id}-rest`)() - 0.5) * 0.6, [id]);
+  const restEuler = useMemo(
+    () => new THREE.Euler(-Math.PI / 2, 0, restRotationY),
+    [restRotationY],
+  );
 
   useFrame((_state, delta) => {
     const group = groupRef.current;
@@ -55,9 +67,8 @@ export function StapledBundle({
     // Start "facing camera" (like it was just held) and rotate flat/level
     // as it settles into the tray, with a small resting-angle jitter.
     const startEuler = new THREE.Euler(-Math.PI / 2, 0, 0);
-    const endEuler = new THREE.Euler(-Math.PI / 2, 0, restRotationY);
     const startQuat = new THREE.Quaternion().setFromEuler(startEuler);
-    const endQuat = new THREE.Quaternion().setFromEuler(endEuler);
+    const endQuat = new THREE.Quaternion().setFromEuler(restEuler);
     group.quaternion.slerpQuaternions(startQuat, endQuat, eased);
 
     // A gentle arc upward mid-flight rather than a flat straight-line glide.
@@ -68,7 +79,11 @@ export function StapledBundle({
   const height = 0.297 * BUNDLE_SCALE;
 
   return (
-    <group ref={groupRef} position={startPosition}>
+    <group
+      ref={groupRef}
+      position={instant ? endPosition : startPosition}
+      rotation={instant ? [restEuler.x, restEuler.y, restEuler.z] : undefined}
+    >
       {/* Cheque strip(s) peeking out from underneath the invoice. */}
       {Array.from({ length: chequeCount }).map((_, i) => (
         <mesh key={i} position={[0.01 * (i + 1), -0.001 * (i + 1), 0.02 * (i + 1)]}>

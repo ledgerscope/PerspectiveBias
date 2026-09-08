@@ -6,14 +6,28 @@ import * as THREE from "three";
 import type { ChequeLayout } from "./chequeLayout";
 import { CHEQUE_WIDTH, CHEQUE_HEIGHT } from "./chequeLayout";
 import { createChequeTexture } from "./textureUtils";
-import { getHeldTargetPosition } from "./holdTarget";
+import {
+  getHeldTargetPosition,
+  getCameraBasis,
+  getHeldInvoiceHalfExtents,
+  HELD_LEFT_OFFSET,
+  HOLD_DISTANCE,
+} from "./holdTarget";
 
 const CHEQUE_THICKNESS = 0.002;
 const SELECTED_SCREEN_FRACTION = 0.34; // smaller than a fully-held invoice - it sits *beside* it
 const SELECTED_SCALE_LAMBDA = 8;
 const SELECTED_MOVE_LAMBDA = 9;
 const CLICK_MAX_MOVEMENT = 6; // px
-const GLOW_COLOR = new THREE.Color("#ffd54a");
+const GLOW_COLOR = new THREE.Color("#2ecc71");
+// Floating/stapling cheques sit this much closer to the camera than the
+// invoice's own hold plane, so they always render visibly in front of it
+// rather than co-planar (which could look tucked behind depending on draw
+// order).
+const IN_FRONT_OFFSET = -0.015;
+// How long the "being stapled" animation (rotate to vertical + snap to the
+// invoice's top-left corner) takes before the fly-to-tray flight begins.
+export const STAPLE_ANIM_DURATION = 1;
 
 interface ChequeProps {
   layout: ChequeLayout;
@@ -23,6 +37,12 @@ interface ChequeProps {
   isSelected: boolean;
   /** Stacking index among all currently-selected cheques (for side-by-side offset). */
   selectedIndex: number;
+  /**
+   * Whether this cheque is currently in the "being stapled" animation -
+   * rotating to vertical and snapping to the held invoice's top-left corner
+   * for STAPLE_ANIM_DURATION seconds before flying off to the tray.
+   */
+  isStapling: boolean;
   onToggleSelect: (chequeId: string) => void;
   resetToken: number;
   surfaceY: number;
@@ -41,6 +61,7 @@ export function Cheque({
   heldInvoiceId,
   isSelected,
   selectedIndex,
+  isStapling,
   onToggleSelect,
   resetToken,
   surfaceY,
@@ -54,6 +75,10 @@ export function Cheque({
   const floatPosRef = useRef<THREE.Vector3 | null>(null);
   const floatQuatRef = useRef<THREE.Quaternion | null>(null);
   const wasSelectedRef = useRef(false);
+  const wasStaplingRef = useRef(false);
+  const staplingElapsedRef = useRef(0);
+  const staplingStartPosRef = useRef<THREE.Vector3 | null>(null);
+  const staplingStartQuatRef = useRef<THREE.Quaternion | null>(null);
   const glowClockRef = useRef(0);
   const { camera } = useThree();
 
@@ -124,7 +149,70 @@ export function Cheque({
     }
 
     let targetScale = 1;
-    if (isSelected) {
+    if (isStapling) {
+      if (!wasStaplingRef.current) {
+        // Just entered the "being stapled" animation - start from wherever
+        // it currently is (its floating position, since it must have been
+        // selected already to trigger the staple).
+        const t = body.translation();
+        const r = body.rotation();
+        staplingStartPosRef.current = floatPosRef.current
+          ? floatPosRef.current.clone()
+          : new THREE.Vector3(t.x, t.y, t.z);
+        staplingStartQuatRef.current = floatQuatRef.current
+          ? floatQuatRef.current.clone()
+          : new THREE.Quaternion(r.x, r.y, r.z, r.w);
+        staplingElapsedRef.current = 0;
+      }
+      staplingElapsedRef.current = Math.min(STAPLE_ANIM_DURATION, staplingElapsedRef.current + delta);
+      const t = staplingElapsedRef.current / STAPLE_ANIM_DURATION;
+      const eased = 1 - Math.pow(1 - t, 3);
+
+      const cam = camera as THREE.PerspectiveCamera;
+      // Target: the invoice's top-left corner, rotated 90deg (about the
+      // camera's own view axis, i.e. a screen-space roll) so the normally
+      // landscape cheque reads as a vertical strip tucked under the corner
+      // - like it's just been physically stapled on at an angle.
+      const invoiceTarget = getHeldTargetPosition(camera, HELD_LEFT_OFFSET, 0);
+      const { forward, right, up } = getCameraBasis(camera);
+      const { halfWidth, halfHeight } = getHeldInvoiceHalfExtents(cam);
+      const cornerTarget = invoiceTarget
+        .addScaledVector(right, -halfWidth * 0.68)
+        .addScaledVector(up, halfHeight * 0.68)
+        .addScaledVector(forward, IN_FRONT_OFFSET * 2);
+
+      const pos = new THREE.Vector3().lerpVectors(staplingStartPosRef.current!, cornerTarget, eased);
+
+      const lookQuat = new THREE.Quaternion();
+      const m = new THREE.Matrix4().lookAt(camera.position, pos, camera.up);
+      lookQuat.setFromRotationMatrix(m);
+      const faceAdjust = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      lookQuat.multiply(faceAdjust);
+      // World-space roll around the camera's forward axis turns the
+      // already-camera-facing rectangle "vertical" on screen, regardless of
+      // the mesh's own local axis conventions.
+      const rollQuat = new THREE.Quaternion().setFromAxisAngle(forward, Math.PI / 2).multiply(lookQuat);
+      const quat = new THREE.Quaternion().slerpQuaternions(staplingStartQuatRef.current!, rollQuat, eased);
+
+      body.setBodyType(RigidBodyType.KinematicPositionBased, true);
+      body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true);
+      body.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }, true);
+      floatPosRef.current = pos;
+      floatQuatRef.current = quat;
+
+      if (cam.isPerspectiveCamera) {
+        const vFov = THREE.MathUtils.degToRad(cam.fov);
+        const viewHeight = 2 * Math.tan(vFov / 2) * (HOLD_DISTANCE + IN_FRONT_OFFSET * 2);
+        const viewWidth = viewHeight * cam.aspect;
+        const baseScale = Math.min(
+          (SELECTED_SCREEN_FRACTION * viewHeight) / CHEQUE_HEIGHT,
+          (SELECTED_SCREEN_FRACTION * viewWidth) / CHEQUE_WIDTH,
+        );
+        // Shrink as it tucks into the corner so it reads as "attached to"
+        // the invoice rather than still floating at full size.
+        targetScale = THREE.MathUtils.lerp(baseScale, baseScale * 0.45, eased);
+      }
+    } else if (isSelected) {
       if (!wasSelectedRef.current) {
         const t = body.translation();
         const r = body.rotation();
@@ -132,9 +220,16 @@ export function Cheque({
         floatQuatRef.current = new THREE.Quaternion(r.x, r.y, r.z, r.w);
       }
 
-      // Offset to the right/below the held invoice, staggered per selected
-      // index so multiple matched cheques fan out rather than overlapping.
-      const target = getHeldTargetPosition(camera, 0.24, -0.16 - selectedIndex * 0.1);
+      // Offset to the right/below the held invoice (staggered per selected
+      // index so multiple matched cheques fan out rather than overlapping),
+      // and slightly toward the camera so it always renders in front of the
+      // invoice rather than co-planar with it.
+      const target = getHeldTargetPosition(
+        camera,
+        HELD_LEFT_OFFSET + 0.24,
+        -0.16 - selectedIndex * 0.1,
+        IN_FRONT_OFFSET,
+      );
 
       const pos = floatPosRef.current!;
       const quat = floatQuatRef.current!;
@@ -159,20 +254,21 @@ export function Cheque({
       const cam = camera as THREE.PerspectiveCamera;
       if (cam.isPerspectiveCamera) {
         const vFov = THREE.MathUtils.degToRad(cam.fov);
-        const viewHeight = 2 * Math.tan(vFov / 2) * 0.9;
+        const viewHeight = 2 * Math.tan(vFov / 2) * (HOLD_DISTANCE + IN_FRONT_OFFSET);
         const viewWidth = viewHeight * cam.aspect;
         targetScale = Math.min(
           (SELECTED_SCREEN_FRACTION * viewHeight) / CHEQUE_HEIGHT,
           (SELECTED_SCREEN_FRACTION * viewWidth) / CHEQUE_WIDTH,
         );
       }
-    } else if (wasSelectedRef.current) {
+    } else if (wasSelectedRef.current || wasStaplingRef.current) {
       // Just deselected - hand control back to physics from wherever it was.
       body.setBodyType(RigidBodyType.Dynamic, true);
       body.setLinvel({ x: 0, y: 0, z: 0 }, true);
       body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     }
     wasSelectedRef.current = isSelected;
+    wasStaplingRef.current = isStapling;
 
     const group = visualRef.current;
     if (group) {
@@ -183,6 +279,7 @@ export function Cheque({
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
+    if (isStapling) return; // no interaction while it's mid-staple animation
     (e.target as Element).setPointerCapture?.(e.pointerId);
     dragState.current.dragging = true;
     dragState.current.pointerId = e.pointerId;
@@ -225,7 +322,7 @@ export function Cheque({
       body.setBodyType(RigidBodyType.Dynamic, true);
       body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
-    if (!state.moved && matches) {
+    if (!state.moved && matches && !isStapling) {
       // Only cheques matching the currently-held invoice can be toggled -
       // clicking an unrelated cheque on the desk just leaves it be.
       onToggleSelect(layout.cheque.id);
