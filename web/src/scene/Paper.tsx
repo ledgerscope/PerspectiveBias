@@ -5,12 +5,9 @@ import { RigidBodyType } from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
 import type { PaperLayout } from "./layout";
 import { createInvoiceTexture } from "./textureUtils";
+import { HOLD_DISTANCE, HELD_LEFT_OFFSET, A4_WIDTH, A4_HEIGHT, HOLD_SCREEN_FRACTION, getHeldTargetPosition } from "./holdTarget";
 
-const A4_WIDTH = 0.21;
-const A4_HEIGHT = 0.297;
 const PAPER_THICKNESS = 0.003;
-const HOLD_DISTANCE = 0.9; // meters in front of the camera when "held up"
-const HOLD_SCREEN_FRACTION = 0.82; // fraction of the viewport the held paper should fill
 const HOLD_SCALE_LAMBDA = 8; // ease-in/out speed for the hold scale animation
 const HOLD_MOVE_LAMBDA = 9; // ease speed for the held paper gliding to/around its target pose
 const CLICK_MAX_MOVEMENT = 6; // px - below this, a pointer up counts as a click not a drag
@@ -22,6 +19,8 @@ interface PaperProps {
   resetToken: number;
   surfaceY: number;
   onDragStateChange: (dragging: boolean) => void;
+  referenceDate: Date;
+  manuallyPaid: boolean;
 }
 
 /**
@@ -46,6 +45,8 @@ export function Paper({
   resetToken,
   surfaceY,
   onDragStateChange,
+  referenceDate,
+  manuallyPaid,
 }: PaperProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -56,7 +57,10 @@ export function Paper({
   const wasHeldRef = useRef(false);
   const { camera } = useThree();
 
-  const texture = useMemo(() => createInvoiceTexture(layout.invoice), [layout.invoice]);
+  const texture = useMemo(
+    () => createInvoiceTexture(layout.invoice, referenceDate, manuallyPaid),
+    [layout.invoice, referenceDate, manuallyPaid],
+  );
 
   const dragState = useRef<{
     dragging: boolean;
@@ -121,9 +125,7 @@ export function Paper({
         heldQuatRef.current = new THREE.Quaternion(r.x, r.y, r.z, r.w);
       }
 
-      const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
-      const target = camera.position.clone().add(forward.multiplyScalar(HOLD_DISTANCE));
+      const target = getHeldTargetPosition(camera, HELD_LEFT_OFFSET, 0);
 
       const pos = heldPosRef.current!;
       const quat = heldQuatRef.current!;
@@ -193,12 +195,16 @@ export function Paper({
   };
 
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (isHeld) return; // held papers don't get dragged around the table
     const state = dragState.current;
     if (!state.dragging || state.pointerId !== e.pointerId) return;
     const dx = e.clientX - state.downX;
     const dy = e.clientY - state.downY;
     if (Math.hypot(dx, dy) > CLICK_MAX_MOVEMENT) state.moved = true;
+    if (isHeld) return; // held papers don't get dragged around the table, but a
+    // drag gesture (e.g. orbiting the camera) that started on top of the held
+    // paper must still count as "moved" above, or pointer-up below would
+    // misread it as a plain click and drop the held paper out from under the
+    // user mid-orbit.
 
     const body = bodyRef.current;
     if (!body) return;

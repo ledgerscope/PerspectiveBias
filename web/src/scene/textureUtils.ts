@@ -1,9 +1,15 @@
 import * as THREE from "three";
-import type { Invoice } from "../xero/types";
+import type { Cheque, Invoice } from "../xero/types";
+import { rngFromString } from "./hash";
+import { isOverdue } from "./dateUtils";
 
 // A4 aspect ratio at a resolution sharp enough to read text when held close.
 const CANVAS_WIDTH = 794; // px, ~96dpi A4 width
 const CANVAS_HEIGHT = 1123; // px, ~96dpi A4 height
+
+// The (invented) company on the receiving end of every invoice/cheque in
+// this scene - keeps "pay to the order of" on cheques consistent.
+const OUR_COMPANY_NAME = "Northwind Trading Co";
 
 function formatCurrency(amount: number, currencyCode: string): string {
   try {
@@ -16,12 +22,211 @@ function formatCurrency(amount: number, currencyCode: string): string {
   }
 }
 
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+// Curated primary/secondary colour pairs so procedural logos read as
+// plausible (if invented) brand palettes rather than random noise.
+const LOGO_PALETTES: [string, string][] = [
+  ["#1d4ed8", "#93c5fd"],
+  ["#b91c1c", "#fca5a5"],
+  ["#047857", "#6ee7b7"],
+  ["#7c2d12", "#fdba74"],
+  ["#5b21b6", "#c4b5fd"],
+  ["#0e7490", "#67e8f9"],
+  ["#a16207", "#fde68a"],
+  ["#be185d", "#f9a8d4"],
+  ["#374151", "#9ca3af"],
+  ["#166534", "#bef264"],
+];
+
+/**
+ * Draws a small procedurally generated brand mark: shape + palette +
+ * initials/wordmark are all derived from a hash of `name`, so the same
+ * contact always renders the same faintly-recognisable logo everywhere it
+ * appears on the desk. Purely invented artwork, no real brand assets.
+ */
+function drawLogo(
+  ctx: CanvasRenderingContext2D,
+  name: string,
+  x: number,
+  y: number,
+  size: number,
+) {
+  const rand = rngFromString(`logo-${name}`);
+  const shapeIdx = Math.floor(rand() * 5);
+  const [primary, secondary] = LOGO_PALETTES[Math.floor(rand() * LOGO_PALETTES.length)];
+  const r = size / 2;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = primary;
+  ctx.beginPath();
+  switch (shapeIdx) {
+    case 0: // circle
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      break;
+    case 1: // rounded square
+      ctx.roundRect(-r, -r, size, size, size * 0.22);
+      break;
+    case 2: // triangle
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r, r * 0.8);
+      ctx.lineTo(-r, r * 0.8);
+      ctx.closePath();
+      break;
+    case 3: // diamond
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r, 0);
+      ctx.lineTo(0, r);
+      ctx.lineTo(-r, 0);
+      ctx.closePath();
+      break;
+    default: { // hexagon
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 2;
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      break;
+    }
+  }
+  ctx.fill();
+
+  ctx.strokeStyle = secondary;
+  ctx.lineWidth = Math.max(2, size * 0.06);
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `bold ${Math.round(size * 0.4)}px Arial`;
+  ctx.fillText(getInitials(name), 0, size * 0.04);
+  ctx.restore();
+
+  // Wordmark next to the mark.
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = primary;
+  ctx.font = `bold ${Math.round(size * 0.42)}px Arial`;
+  ctx.fillText(name, x + r + size * 0.35, y);
+}
+
+/** Traces a hand-stamped-looking rough-edged circle path (deterministic noise). */
+function roughCirclePath(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  rand: () => number,
+  amplitude: number,
+) {
+  const phases = [rand() * Math.PI * 2, rand() * Math.PI * 2, rand() * Math.PI * 2];
+  const steps = 56;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const theta = (i / steps) * Math.PI * 2;
+    const noise =
+      Math.sin(theta * 3 + phases[0]) * 0.5 +
+      Math.sin(theta * 5 + phases[1]) * 0.3 +
+      Math.sin(theta * 9 + phases[2]) * 0.2;
+    const rr = radius + noise * amplitude;
+    const px = Math.cos(theta) * rr;
+    const py = Math.sin(theta) * rr;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+export type StampKind = "paid" | "overdue" | "void" | "draft" | "manual-paid";
+
+const STAMP_STYLE: Record<StampKind, { color: string; label: string; sublabel: string }> = {
+  paid: { color: "#1e7e34", label: "PAID", sublabel: "SETTLED IN FULL" },
+  overdue: { color: "#b3261e", label: "OVERDUE", sublabel: "PLEASE REMIT" },
+  void: { color: "#595959", label: "VOID", sublabel: "CANCELLED" },
+  draft: { color: "#3b5bdb", label: "DRAFT", sublabel: "NOT YET SENT" },
+  "manual-paid": { color: "#1a8f3c", label: "PAID", sublabel: "RECONCILED" },
+};
+
+/**
+ * Draws an angled rubber-stamp mark (rough ink edge, per-invoice rotation
+ * jitter so it looks hand applied) at (x, y). `seedKey` drives the jitter so
+ * the same invoice always gets the same stamp placement/angle.
+ */
+export function drawStamp(
+  ctx: CanvasRenderingContext2D,
+  kind: StampKind,
+  x: number,
+  y: number,
+  seedKey: string,
+  scale = 1,
+) {
+  const rand = rngFromString(`stamp-${seedKey}`);
+  const style = STAMP_STYLE[kind];
+  const baseAngle = -0.22 + (rand() - 0.5) * 0.5; // hand-applied off-kilter angle
+  const outerR = 118 * scale;
+  const innerR = 92 * scale;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(baseAngle);
+  ctx.globalAlpha = 0.82;
+  ctx.strokeStyle = style.color;
+  ctx.fillStyle = style.color;
+
+  ctx.lineWidth = 6 * scale;
+  roughCirclePath(ctx, outerR, rand, 3.5 * scale);
+  ctx.stroke();
+  ctx.lineWidth = 3 * scale;
+  roughCirclePath(ctx, innerR, rand, 2.5 * scale);
+  ctx.stroke();
+
+  // Ink speckles scattered near the ring for a worn, hand-stamped texture.
+  for (let i = 0; i < 26; i++) {
+    if (rand() < 0.45) continue;
+    const theta = rand() * Math.PI * 2;
+    const rr = outerR + (rand() - 0.5) * 16 * scale;
+    ctx.beginPath();
+    ctx.arc(Math.cos(theta) * rr, Math.sin(theta) * rr, rand() * 2.2 * scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `bold ${Math.round(40 * scale)}px Arial`;
+  ctx.fillText(style.label, 0, -6 * scale);
+  ctx.font = `bold ${Math.round(15 * scale)}px Arial`;
+  ctx.fillText(style.sublabel, 0, 26 * scale);
+  ctx.restore();
+}
+
+/** Which stamp (if any) an invoice should carry, before any manual override. */
+export function getInvoiceStampKind(invoice: Invoice, referenceDate: Date): StampKind | null {
+  if (invoice.status === "PAID") return "paid";
+  if (invoice.status === "VOIDED") return "void";
+  if (invoice.status === "DRAFT") return "draft";
+  if (isOverdue(invoice, referenceDate)) return "overdue";
+  return null; // submitted/authorised and not yet due - no stamp yet
+}
+
 /**
  * Renders an invoice onto an offscreen canvas that looks like a printed A4
- * invoice, and returns it as a Three.js texture to be mapped onto a paper
+ * invoice - including a procedural per-customer logo and a status rubber
+ * stamp - and returns it as a Three.js texture to be mapped onto a paper
  * mesh.
  */
-export function createInvoiceTexture(invoice: Invoice): THREE.CanvasTexture {
+export function createInvoiceTexture(
+  invoice: Invoice,
+  referenceDate: Date,
+  manuallyPaid = false,
+): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
@@ -35,13 +240,19 @@ export function createInvoiceTexture(invoice: Invoice): THREE.CanvasTexture {
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   const margin = 56;
-  ctx.fillStyle = "#111111";
-  ctx.font = "bold 40px Arial";
-  ctx.fillText("INVOICE", margin, margin + 36);
 
-  ctx.font = "20px Arial";
+  // Fictitious brand mark, top-left of the header.
+  drawLogo(ctx, invoice.contactName, margin + 32, margin + 34, 64);
+
+  // "INVOICE" title + number, right-aligned so it never collides with the logo.
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#111111";
+  ctx.font = "bold 36px Arial";
+  ctx.fillText("INVOICE", CANVAS_WIDTH - margin, margin + 24);
+  ctx.font = "18px Arial";
   ctx.fillStyle = "#444444";
-  ctx.fillText(invoice.invoiceNumber, margin, margin + 68);
+  ctx.fillText(invoice.invoiceNumber, CANVAS_WIDTH - margin, margin + 54);
+  ctx.textAlign = "left";
 
   ctx.strokeStyle = "#cccccc";
   ctx.lineWidth = 2;
@@ -122,6 +333,18 @@ export function createInvoiceTexture(invoice: Invoice): THREE.CanvasTexture {
     y,
   );
 
+  // Status stamp - angled, roughened, per-invoice jitter so it looks hand
+  // applied. Voided/draft invoices get their own variant; a manual PAID
+  // reconciliation stamp (applied interactively) is drawn last, on top of
+  // whatever printed stamp was already there.
+  const printedStamp = getInvoiceStampKind(invoice, referenceDate);
+  if (printedStamp) {
+    drawStamp(ctx, printedStamp, CANVAS_WIDTH * 0.7, CANVAS_HEIGHT * 0.32, invoice.id);
+  }
+  if (manuallyPaid) {
+    drawStamp(ctx, "manual-paid", CANVAS_WIDTH * 0.42, CANVAS_HEIGHT * 0.46, `${invoice.id}-manual`, 1.15);
+  }
+
   // Subtle paper texture noise so it doesn't look perfectly flat/digital.
   // putImageData() writes pixels directly and ignores
   // globalCompositeOperation/alpha blending entirely, which previously wiped
@@ -153,49 +376,165 @@ export function createInvoiceTexture(invoice: Invoice): THREE.CanvasTexture {
   return texture;
 }
 
+const ONES = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const TEENS = [
+  "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen",
+];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+function chunkToWords(n: number): string {
+  if (n === 0) return "";
+  if (n < 10) return ONES[n];
+  if (n < 20) return TEENS[n - 10];
+  if (n < 100) return `${TENS[Math.floor(n / 10)]}${n % 10 ? "-" + ONES[n % 10] : ""}`;
+  return `${ONES[Math.floor(n / 100)]} hundred${n % 100 ? " " + chunkToWords(n % 100) : ""}`;
+}
+
+/** Minimal integer-dollar amount-in-words, good enough for typical invoice totals. */
+function amountToWords(amount: number): string {
+  const dollars = Math.floor(amount);
+  const cents = Math.round((amount - dollars) * 100);
+  if (dollars === 0) return `zero and ${cents}/100`;
+  let n = dollars;
+  const parts: string[] = [];
+  const thousands = Math.floor(n / 1000);
+  n %= 1000;
+  if (thousands > 0) parts.push(`${chunkToWords(thousands)} thousand`);
+  if (n > 0) parts.push(chunkToWords(n));
+  const words = parts.join(" ") || "zero";
+  return `${words} and ${cents}/100`;
+}
+
 /**
- * Generates a procedural "random photo" placeholder texture for the cubicle
- * wall (abstract gradient + shapes) so the wall doesn't need real image
- * assets for the prototype. Swap `public/wall-images` with real photos and
- * point CubicleWall at them for the final version.
+ * Renders a cheque onto an offscreen canvas: a real-world landscape cheque
+ * layout (bank mark, payee/amount, amount-in-words, signature, MICR line) -
+ * deliberately nothing like the A4 invoices it pays.
  */
-export function createPlaceholderPhotoTexture(seed: number): THREE.CanvasTexture {
-  const size = 256;
+export function createChequeTexture(cheque: Cheque): THREE.CanvasTexture {
+  const width = 700;
+  const height = 320;
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D canvas context unavailable");
 
-  // Deterministic pseudo-random generator so wall layout is stable per seed.
-  let s = seed * 9301 + 49297;
-  const rand = () => {
-    s = (s * 9301 + 49297) % 233280;
-    return s / 233280;
-  };
+  const rand = rngFromString(`cheque-${cheque.id}`);
 
-  const hue = Math.floor(rand() * 360);
-  const grad = ctx.createLinearGradient(0, 0, size, size);
-  grad.addColorStop(0, `hsl(${hue}, 55%, 65%)`);
-  grad.addColorStop(1, `hsl(${(hue + 60) % 360}, 55%, 40%)`);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#eef3e8";
+  ctx.fillRect(0, 0, width, height);
 
-  // A few random shapes to suggest "photo content" without real images.
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = `hsla(${(hue + i * 40) % 360}, 70%, 80%, 0.5)`;
+  // Faint guilloche-style wavy security pattern.
+  ctx.strokeStyle = "rgba(70, 100, 70, 0.15)";
+  ctx.lineWidth = 1;
+  for (let lineY = 20; lineY < height - 20; lineY += 10) {
     ctx.beginPath();
-    ctx.arc(rand() * size, rand() * size, 20 + rand() * 60, 0, Math.PI * 2);
-    ctx.fill();
+    for (let x = 0; x <= width; x += 4) {
+      const yy = lineY + Math.sin(x * 0.05 + lineY) * 4;
+      if (x === 0) ctx.moveTo(x, yy);
+      else ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
   }
 
-  // White polaroid-style border.
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 14;
-  ctx.strokeRect(7, 7, size - 14, size - 14);
+  ctx.strokeStyle = "#7a8f74";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(6, 6, width - 12, height - 12);
+
+  // Bank mark, top-left.
+  drawLogo(ctx, cheque.bankName, 64, 40, 46);
+
+  // Cheque number + date, top-right.
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#2f3b2f";
+  ctx.font = "bold 20px Georgia";
+  ctx.fillText(`No. ${cheque.chequeNumber}`, width - 24, 30);
+  ctx.font = "16px Georgia";
+  ctx.fillText(cheque.date, width - 24, 54);
+  ctx.textAlign = "left";
+
+  // Payer name/address block.
+  ctx.fillStyle = "#2f3b2f";
+  ctx.font = "15px Georgia";
+  ctx.fillText(cheque.payerName, 24, 90);
+  ctx.fillStyle = "#5a6a5a";
+  ctx.font = "12px Georgia";
+  ctx.fillText("123 Commerce Street", 24, 106);
+
+  // Pay to the order of + amount.
+  let y = 150;
+  ctx.fillStyle = "#2f3b2f";
+  ctx.font = "13px Georgia";
+  ctx.fillText("PAY TO THE ORDER OF", 24, y);
+  ctx.font = "20px 'Segoe Script', Georgia";
+  ctx.fillText(OUR_COMPANY_NAME, 200, y + 2);
+  ctx.beginPath();
+  ctx.moveTo(200, y + 8);
+  ctx.lineTo(width - 150, y + 8);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#2f3b2f";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(width - 140, y - 22, 116, 28);
+  ctx.font = "bold 20px Georgia";
+  ctx.textAlign = "right";
+  ctx.fillText(formatCurrency(cheque.amount, cheque.currencyCode), width - 34, y - 3);
+  ctx.textAlign = "left";
+
+  // Amount in words.
+  y += 34;
+  ctx.font = "italic 15px Georgia";
+  ctx.fillStyle = "#2f3b2f";
+  ctx.fillText(`${amountToWords(cheque.amount)} dollars`, 24, y);
+  ctx.beginPath();
+  ctx.moveTo(24, y + 6);
+  ctx.lineTo(width - 24, y + 6);
+  ctx.stroke();
+
+  // Memo + signature.
+  y = height - 46;
+  ctx.font = "12px Georgia";
+  ctx.fillStyle = "#5a6a5a";
+  ctx.fillText(`Memo: ${cheque.memo}`, 24, y + 14);
+  ctx.beginPath();
+  ctx.moveTo(24, y);
+  ctx.lineTo(220, y);
+  ctx.stroke();
+
+  // Deterministic squiggly signature.
+  ctx.strokeStyle = "#1f2a4d";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  const sigX = width - 220;
+  const sigY = height - 50;
+  ctx.moveTo(sigX, sigY);
+  for (let i = 0; i < 8; i++) {
+    const cx1 = sigX + (i + rand()) * 20;
+    const cy1 = sigY - rand() * 18;
+    const cx2 = sigX + (i + 0.5 + rand()) * 20;
+    const cy2 = sigY + rand() * 14;
+    ctx.quadraticCurveTo(cx1, cy1, cx2, cy2);
+  }
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sigX, height - 34);
+  ctx.lineTo(sigX + 176, height - 34);
+  ctx.strokeStyle = "#2f3b2f";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // MICR-style routing/account line along the bottom, in a mono font to
+  // suggest magnetic ink character recognition digits.
+  const micrHash = rngFromString(`micr-${cheque.id}`);
+  const routing = Array.from({ length: 9 }, () => Math.floor(micrHash() * 10)).join("");
+  const account = Array.from({ length: 10 }, () => Math.floor(micrHash() * 10)).join("");
+  ctx.font = "20px 'Courier New', monospace";
+  ctx.fillStyle = "#1f2a4d";
+  ctx.fillText(`⑆${routing}⑆ ${account}⑈ ${cheque.chequeNumber}`, 24, height - 12);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
   return texture;
 }
 
@@ -283,6 +622,11 @@ export const DEMOTIVATIONAL_SAYINGS: string[] = [
   "Every invoice matters.\n(to someone else)",
   "You miss 100% of the\nnaps you don't take\nUnfortunately, HR notices",
   "ALMOST FRIDAY\nsaid every day of the week",
+  "AMBITION\nThe first step towards\ndisappointment",
+  "MEETINGS\nNone of us is as dumb\nas all of us",
+  "CHANGE\nIt's what's left of your\npay after the deductions",
+  "SYNERGY\nA word used to justify\nyet another meeting",
+  "DEADLINES\nWho says nothing\nfocuses the mind",
 ];
 
 /**
