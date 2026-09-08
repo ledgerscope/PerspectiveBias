@@ -271,6 +271,228 @@ export const DEMOTIVATIONAL_SAYINGS: string[] = [
 ];
 
 /**
+ * Picks a deterministic "pose" index for the little cartoon management
+ * drawing based on the poster's text, so the same saying always renders
+ * with the same doodle and different posters get visual variety.
+ */
+function pickManagerPose(text: string): number {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash * 31 + text.charCodeAt(i)) % 997;
+  }
+  return hash % 3;
+}
+
+/**
+ * Draws a little cartoon-style "management" figure - bold black outlines,
+ * flat suit colours, a stern or smug expression - standing with its feet
+ * at (centerX, groundY). `pose` picks between a few sarcastic management
+ * cliches: pointing at someone, smugly sipping coffee, or barking into a
+ * phone (a nod to the office's rotary phone prop).
+ */
+function drawCartoonManager(ctx: CanvasRenderingContext2D, pose: number, centerX: number, groundY: number): void {
+  ctx.save();
+  ctx.translate(centerX, groundY);
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#111111";
+
+  // Legs (dark suit trousers).
+  ctx.fillStyle = "#2b2b38";
+  ctx.beginPath();
+  ctx.moveTo(-22, 0);
+  ctx.lineTo(-22, -55);
+  ctx.lineTo(-6, -55);
+  ctx.lineTo(-4, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(22, 0);
+  ctx.lineTo(22, -55);
+  ctx.lineTo(6, -55);
+  ctx.lineTo(4, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Torso (suit jacket).
+  ctx.fillStyle = "#38405a";
+  ctx.beginPath();
+  ctx.moveTo(-30, -55);
+  ctx.quadraticCurveTo(-34, -110, -20, -120);
+  ctx.lineTo(20, -120);
+  ctx.quadraticCurveTo(34, -110, 30, -55);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Shirt + tie.
+  ctx.fillStyle = "#e8e8e8";
+  ctx.beginPath();
+  ctx.moveTo(-10, -120);
+  ctx.lineTo(10, -120);
+  ctx.lineTo(6, -60);
+  ctx.lineTo(-6, -60);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#b23a2e";
+  ctx.beginPath();
+  ctx.moveTo(-5, -118);
+  ctx.lineTo(5, -118);
+  ctx.lineTo(8, -70);
+  ctx.lineTo(0, -60);
+  ctx.lineTo(-8, -70);
+  ctx.closePath();
+  ctx.fill();
+
+  // Pose-specific arms + prop, drawn before the head so the head sits on top.
+  ctx.fillStyle = "#38405a";
+  if (pose === 0) {
+    // Pointing sternly at the viewer.
+    ctx.beginPath();
+    ctx.moveTo(20, -115);
+    ctx.lineTo(58, -128);
+    ctx.lineTo(52, -138);
+    ctx.lineTo(18, -100);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#f0c9a0";
+    ctx.beginPath();
+    ctx.ellipse(58, -133, 8, 6, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#38405a";
+    ctx.beginPath();
+    ctx.moveTo(-20, -115);
+    ctx.lineTo(-30, -65);
+    ctx.lineTo(-18, -62);
+    ctx.lineTo(-14, -110);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (pose === 1) {
+    // Smugly sipping from a giant coffee mug.
+    ctx.beginPath();
+    ctx.moveTo(18, -115);
+    ctx.lineTo(38, -128);
+    ctx.lineTo(30, -140);
+    ctx.lineTo(12, -128);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Mug.
+    ctx.fillStyle = "#d8d8d8";
+    ctx.beginPath();
+    ctx.rect(24, -150, 22, 22);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(48, -142, 6, 9, 0, -Math.PI / 2, Math.PI / 2);
+    ctx.stroke();
+    ctx.fillStyle = "#38405a";
+    ctx.beginPath();
+    ctx.moveTo(-20, -115);
+    ctx.lineTo(-34, -95);
+    ctx.lineTo(-22, -88);
+    ctx.lineTo(-14, -108);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    // Barking into a phone handset (a nod to the desk's rotary phone).
+    ctx.beginPath();
+    ctx.moveTo(20, -115);
+    ctx.lineTo(36, -136);
+    ctx.lineTo(28, -146);
+    ctx.lineTo(14, -125);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Dumbbell-shaped handset held to the ear, echoing the desk's rotary phone.
+    ctx.fillStyle = "#20242b";
+    ctx.beginPath();
+    ctx.moveTo(24, -155);
+    ctx.lineTo(40, -139);
+    ctx.lineTo(34, -133);
+    ctx.lineTo(18, -149);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(21, -152, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(37, -136, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#38405a";
+    ctx.beginPath();
+    ctx.moveTo(-20, -115);
+    ctx.lineTo(-36, -80);
+    ctx.lineTo(-24, -74);
+    ctx.lineTo(-14, -108);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Head.
+  ctx.fillStyle = "#f0c9a0";
+  ctx.beginPath();
+  ctx.arc(0, -140, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Face: stern eyebrows for the pointing/phone poses, a smug closed
+  // smile for the coffee pose.
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  if (pose === 1) {
+    ctx.moveTo(-10, -146);
+    ctx.lineTo(-3, -144);
+    ctx.moveTo(3, -144);
+    ctx.lineTo(10, -146);
+  } else {
+    ctx.moveTo(-10, -145);
+    ctx.lineTo(-3, -149);
+    ctx.moveTo(3, -149);
+    ctx.lineTo(10, -145);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = "#111111";
+  ctx.beginPath();
+  ctx.arc(-6, -140, 2, 0, Math.PI * 2);
+  ctx.arc(6, -140, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  if (pose === 2) {
+    // Open, shouting mouth.
+    ctx.ellipse(0, -130, 5, 6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#7a2020";
+    ctx.fill();
+    ctx.stroke();
+  } else if (pose === 1) {
+    // Smug closed smile.
+    ctx.moveTo(-6, -130);
+    ctx.quadraticCurveTo(0, -125, 6, -130);
+    ctx.stroke();
+  } else {
+    // Flat, unimpressed frown.
+    ctx.moveTo(-6, -128);
+    ctx.lineTo(6, -128);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/**
  * Renders a black-frame "motivational" poster with a sarcastic office
  * saying - the visual gag for the cubicle wall.
  */
@@ -300,12 +522,10 @@ export function createPosterTexture(text: string): THREE.CanvasTexture {
   ctx.fillStyle = grad;
   ctx.fillRect(imageInset + 2, imageInset + 2, width - imageInset * 2 - 4, imageBottom - imageInset - 4);
 
-  // A single small silhouette figure slumped at a desk, for the "bleak" look.
-  ctx.fillStyle = "#20242a";
-  ctx.fillRect(width / 2 - 30, imageBottom - 70, 60, 40);
-  ctx.beginPath();
-  ctx.arc(width / 2, imageBottom - 80, 16, 0, Math.PI * 2);
-  ctx.fill();
+  // A little cartoon-style management figure, standing in for the old
+  // bleak "photo" - same demotivator frame, same sarcastic wording, just
+  // a doodle of the boss instead of a slumped silhouette.
+  drawCartoonManager(ctx, pickManagerPose(text), width / 2, imageBottom - 12);
 
   // Title + caption below, in the demotivator poster tradition.
   const lines = text.split("\n");
