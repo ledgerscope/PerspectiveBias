@@ -29,5 +29,8 @@
 	"vars": {
 		// Must exactly match the redirect URI registered on the Xero app.
 		"XERO_REDIRECT_URI": "https://bounce.ledgerscope.com/api/xero/callback"
+		// Local dev/debugging: set XERO_DISABLE_LIVE=true in `.dev.vars`
+		// (not here) to skip Xero entirely and stick to the offline fixture -
+		// see `.dev.vars.example`. Leave unset here so production stays live.
 	}
 }
