@@ -85,7 +85,8 @@ export function StatusOverlay({ mode, error, invoiceCount }: StatusOverlayProps)
       >
         Drag papers around the desk &middot; drag through a stack to knock it
         over &middot; click a paper to hold it up &middot; click again to put
-        it down &middot; press <strong>space</strong> to reset the desk
+        it down &middot; press <strong>space</strong> to reset the desk &middot;
+        pick up the phone to connect to Xero
       </div>
     </div>
   );

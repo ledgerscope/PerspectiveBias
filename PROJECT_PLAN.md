@@ -16,6 +16,7 @@ are physical, interactive objects the user can paw through by hand.
 | Left click on a paper  | Paper animates up to "hold to face" position directly in front of the camera, rendered large/legible with full invoice detail |
 | Left click elsewhere (paper held) | Releases the held paper back to the table |
 | Space bar              | Resets all papers/stacks back to their original table layout (animated tween, not a hard cut) |
+| Left click on the rotary phone | Kicks off the Xero OAuth2 connect flow (redirects to `/api/xero/connect`) - the in-world "connect to Xero" control, its dial shows a live/connected status dot |
 
 ## Visual / Rendering
 

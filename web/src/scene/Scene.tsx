@@ -5,6 +5,7 @@ import { OrbitControls } from "@react-three/drei";
 import { Desk } from "./Desk";
 import { CubicleWall } from "./CubicleWall";
 import { Paper } from "./Paper";
+import { RotaryPhone } from "./RotaryPhone";
 import { generateInitialLayout, TABLE_DIMENSIONS } from "./layout";
 import { useInvoices } from "./useInvoices";
 import { useResetOnSpace } from "./useResetOnSpace";
@@ -43,6 +44,7 @@ export function Scene() {
         <Physics gravity={[0, -9.81, 0]}>
           <Desk />
           <CubicleWall />
+          <RotaryPhone />
           {layouts.map((layout) => (
             <Paper
               key={layout.id}

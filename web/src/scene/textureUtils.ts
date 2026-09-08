@@ -199,6 +199,67 @@ export function createPlaceholderPhotoTexture(seed: number): THREE.CanvasTexture
   return texture;
 }
 
+export type PhoneDialState = "loading" | "connected" | "disconnected" | "disabled";
+
+const DIAL_CAPTION: Record<PhoneDialState, string> = {
+  loading: "...",
+  connected: "Connected",
+  disconnected: "Tap to connect",
+  disabled: "Demo mode",
+};
+
+const DIAL_DOT_COLOR: Record<PhoneDialState, string> = {
+  loading: "#999999",
+  connected: "#2ecc71",
+  disconnected: "#13b5ea",
+  disabled: "#f39c12",
+};
+
+/**
+ * Renders the "dial face" texture for the desk's rotary phone prop: a plain
+ * text "XERO" wordmark (deliberately not a reproduction of Xero's actual
+ * logo artwork/mark, just the brand name in their brand blue, the same way
+ * a real "Connect to Xero" button would reference it) plus a status dot and
+ * caption reflecting the current connection state.
+ */
+export function createPhoneDialTexture(state: PhoneDialState): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+
+  // Cream dial face, classic rotary-phone colouring.
+  ctx.fillStyle = "#f4f1e8";
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#cfc9b8";
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  ctx.fillStyle = "#13b5ea"; // Xero's brand blue - text only, not the logo mark.
+  ctx.font = "bold 100px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("XERO", size / 2, size / 2 - 40);
+
+  ctx.beginPath();
+  ctx.fillStyle = DIAL_DOT_COLOR[state];
+  ctx.arc(size / 2 - 96, size / 2 + 70, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#3a3a3a";
+  ctx.font = "30px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText(DIAL_CAPTION[state], size / 2 - 60, size / 2 + 70);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 /** Faux-inspirational office posters that are actually the opposite. */
 export const DEMOTIVATIONAL_SAYINGS: string[] = [
   "It's not meant to be fun,\nyou're here to work",
