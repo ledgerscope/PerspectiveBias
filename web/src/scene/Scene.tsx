@@ -21,10 +21,9 @@ import { StatusOverlay } from "../components/StatusOverlay";
 
 // Fixed desk spots for the reconciliation tools. The stamp/stapler sit just
 // outside the footprint of a held invoice (which fills most of the center of
-// the view) but still safely inside the *default*, un-orbited camera frustum
-// - OrbitControls is disabled while an invoice is held, so unlike the tray
-// (which is only ever looked at once nothing is held) these two must be
-// reachable without the user rotating the view first.
+// the view) but still safely inside the *default*, un-orbited camera frustum,
+// since a user who hasn't yet panned/orbited around still needs to be able to
+// reach them the first time an invoice is held.
 const TRAY_POSITION: [number, number, number] = [1.5, TABLE_DIMENSIONS.surfaceY + 0.006, 0.55];
 const STAMP_HOME: [number, number, number] = [1.15, TABLE_DIMENSIONS.surfaceY + 0.05, 0.15];
 const STAPLER_HOME: [number, number, number] = [-1.1, TABLE_DIMENSIONS.surfaceY + 0.02, 0.15];
@@ -58,9 +57,11 @@ export function Scene() {
 
   // Tracks how many papers/cheques currently have an active pointer-down
   // (dragging) gesture on them, so the orbit camera can be suspended for
-  // the whole gesture - not just once something is "held" - otherwise
-  // OrbitControls fights the drag and both the pan and the click-to-hold
-  // break.
+  // the whole gesture - otherwise OrbitControls fights the drag and both
+  // the pan and the click-to-hold break. Holding an invoice/cheque up to
+  // view it does *not* set this (that's a settled state, not an in-progress
+  // gesture), so the camera can still be freely orbited/panned/zoomed while
+  // something is held - the held item just follows the camera live.
   const dragCountRef = useRef(0);
   const [isDraggingPaper, setIsDraggingPaper] = useState(false);
   const handleDragStateChange = useCallback((dragging: boolean) => {
@@ -194,7 +195,7 @@ export function Scene() {
           <StaplerTool visible={canReconcile} homePosition={STAPLER_HOME} onStaple={handleStaple} />
         </Physics>
         <OrbitControls
-          enabled={!heldId && !isDraggingPaper}
+          enabled={!isDraggingPaper}
           target={[0, TABLE_DIMENSIONS.height, 0]}
           maxPolarAngle={Math.PI / 2.1}
           minDistance={0.8}

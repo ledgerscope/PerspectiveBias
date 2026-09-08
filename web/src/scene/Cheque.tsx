@@ -48,7 +48,8 @@ export function Cheque({
 }: ChequeProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const visualRef = useRef<THREE.Group>(null);
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const baseMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const faceMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const floatScaleRef = useRef(1);
   const floatPosRef = useRef<THREE.Vector3 | null>(null);
   const floatQuatRef = useRef<THREE.Quaternion | null>(null);
@@ -105,11 +106,16 @@ export function Cheque({
 
     // Glow pulse while this cheque matches the held invoice but hasn't been
     // pulled up yet - a gentle emissive breathing effect to draw the eye.
-    const material = materialRef.current;
-    if (material) {
-      if (matches && !isSelected) {
-        glowClockRef.current += delta;
-        const pulse = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(glowClockRef.current * 4));
+    // Applied to *both* materials: the printed face (what the camera
+    // actually sees from above - the plane sits right on top of the box and
+    // fully occludes it) and the underlying box (visible edge-on / from
+    // below), so the glow reads correctly from any angle.
+    const targetIntensity = matches && !isSelected ? 1 : 0;
+    if (targetIntensity > 0) glowClockRef.current += delta;
+    const pulse = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(glowClockRef.current * 4));
+    for (const material of [baseMaterialRef.current, faceMaterialRef.current]) {
+      if (!material) continue;
+      if (targetIntensity > 0) {
         material.emissive.copy(GLOW_COLOR);
         material.emissiveIntensity = pulse;
       } else {
@@ -192,12 +198,14 @@ export function Cheque({
   };
 
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (isSelected) return;
     const state = dragState.current;
     if (!state.dragging || state.pointerId !== e.pointerId) return;
     const dx = e.clientX - state.downX;
     const dy = e.clientY - state.downY;
     if (Math.hypot(dx, dy) > CLICK_MAX_MOVEMENT) state.moved = true;
+    if (isSelected) return; // floating cheques don't get dragged around the table, but
+    // (as above) a drag/orbit gesture that started on top of one must still
+    // count as "moved" so pointer-up doesn't misread it as a deselect click.
 
     const body = bodyRef.current;
     if (!body) return;
@@ -244,11 +252,11 @@ export function Cheque({
           receiveShadow
         >
           <boxGeometry args={[CHEQUE_WIDTH, CHEQUE_THICKNESS, CHEQUE_HEIGHT]} />
-          <meshStandardMaterial ref={materialRef} color={baseColor} roughness={0.85} />
+          <meshStandardMaterial ref={baseMaterialRef} color={baseColor} roughness={0.85} />
         </mesh>
         <mesh position={[0, CHEQUE_THICKNESS / 2 + 0.0003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[CHEQUE_WIDTH, CHEQUE_HEIGHT]} />
-          <meshStandardMaterial map={texture} roughness={0.85} />
+          <meshStandardMaterial ref={faceMaterialRef} map={texture} roughness={0.85} />
         </mesh>
       </group>
     </RigidBody>

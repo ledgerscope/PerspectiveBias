@@ -198,12 +198,16 @@ export function Paper({
   };
 
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (isHeld) return; // held papers don't get dragged around the table
     const state = dragState.current;
     if (!state.dragging || state.pointerId !== e.pointerId) return;
     const dx = e.clientX - state.downX;
     const dy = e.clientY - state.downY;
     if (Math.hypot(dx, dy) > CLICK_MAX_MOVEMENT) state.moved = true;
+    if (isHeld) return; // held papers don't get dragged around the table, but a
+    // drag gesture (e.g. orbiting the camera) that started on top of the held
+    // paper must still count as "moved" above, or pointer-up below would
+    // misread it as a plain click and drop the held paper out from under the
+    // user mid-orbit.
 
     const body = bodyRef.current;
     if (!body) return;
