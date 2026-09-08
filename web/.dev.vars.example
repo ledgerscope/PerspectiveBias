@@ -1,0 +1,7 @@
+# Copy this file to `.dev.vars` (gitignored) for local `wrangler dev` runs.
+# In production, set these as Worker secrets instead - never commit real
+# values:
+#   wrangler secret put XERO_CLIENT_ID
+#   wrangler secret put XERO_CLIENT_SECRET
+XERO_CLIENT_ID=your-xero-app-client-id
+XERO_CLIENT_SECRET=your-xero-app-client-secret

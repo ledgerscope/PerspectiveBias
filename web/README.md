@@ -33,13 +33,51 @@ Xero backend proxy is included yet.
 
 ## Xero live data
 
-The client never talks to Xero directly (CORS + OAuth secret handling), so a
-live deployment needs a small backend/proxy exposing
-`GET /api/xero/invoices` that holds the Xero OAuth2 token and returns an
-array of `Invoice` objects (see `src/xero/types.ts`). That backend is not
-included in this prototype; without it the app runs entirely on the bundled
-offline fixture, which is by design (this is also the "wifi dropped"
-fallback path).
+The client never talks to Xero directly (CORS + OAuth secret handling), so
+requests go through a small backend/proxy built into the Cloudflare Worker
+(`src/worker/`) that holds the Xero OAuth2 token and exposes:
+
+- `GET /api/xero/connect` - starts the OAuth2 Authorization Code flow by
+  redirecting to Xero's login/consent screen.
+- `GET /api/xero/callback` - the registered OAuth2 redirect URI; exchanges
+  the code for tokens, looks up the connected tenant, and stores both in a
+  Workers KV namespace.
+- `GET /api/xero/status` - reports whether a Xero org is currently connected
+  (no secrets returned), useful for debugging.
+- `GET /api/xero/invoices` - used by the frontend; refreshes the access
+  token if needed and returns the most recent invoices as an array of
+  `Invoice` objects (see `src/xero/types.ts`).
+
+If nothing is connected yet (or the Xero call fails/times out), `/api/xero/invoices`
+returns a non-2xx response and the app automatically falls back to the bundled
+offline fixture - this is also the "wifi dropped" fallback path in production.
+
+### One-time setup
+
+1. **Create a Xero app** at the [Xero developer portal](https://developer.xero.com/app/manage)
+   (an "Web app" / Auth Code Flow app), and set its redirect URI to match
+   `XERO_REDIRECT_URI` below (e.g. `https://bounce.ledgerscope.com/api/xero/callback`).
+2. **Create the KV namespace** used to store tokens, then paste the printed
+   id into `wrangler.jsonc` under `kv_namespaces[0].id`:
+   ```bash
+   wrangler kv namespace create XERO_TOKENS
+   ```
+3. **Set the redirect URI** the Worker will use, in `wrangler.jsonc` under
+   `vars.XERO_REDIRECT_URI` - it must exactly match what's registered on the
+   Xero app (currently set to `https://bounce.ledgerscope.com/api/xero/callback`).
+4. **Set the client id/secret as Worker secrets** (never commit these or
+   paste them into chat/issues - `wrangler secret put` reads them from a
+   local prompt):
+   ```bash
+   wrangler secret put XERO_CLIENT_ID
+   wrangler secret put XERO_CLIENT_SECRET
+   ```
+   For local `wrangler dev` runs, copy `.dev.vars.example` to `.dev.vars`
+   (gitignored) and fill in the same two values instead.
+5. **Deploy**, then visit `/api/xero/connect` once in a browser to complete
+   the OAuth consent screen and store a token. After that, `/api/xero/invoices`
+   will serve live data (refreshing the token automatically) until the Xero
+   refresh token is revoked.
 
 ## Cloudflare Worker deployment
 
@@ -81,6 +119,7 @@ src/
   scene/        3D scene: cubicle wall, desk, physics-backed paper, layout/texture helpers
   xero/         Invoice types + live/offline data source abstraction
   components/   UI overlay (live/offline status, controls hint)
+  worker/       Cloudflare Worker: Xero OAuth2 + /api/xero/* endpoints
 public/
   offline-invoices.json   bundled fixture invoices used offline/for the demo
 ```
@@ -90,7 +129,8 @@ public/
 - Cubicle wall photos are procedurally generated placeholders, not real
   images - drop files into `public/wall-images` and update `CubicleWall.tsx`
   to use real photos.
-- No Xero OAuth backend is included; live mode requires standing one up
-  separately.
 - Paper orientation while "held to face" is a simple look-at rotation and
   may need visual tuning per camera angle.
+- The Xero OAuth backend supports a single connected organisation at a time
+  (tokens are stored under one KV key); multi-tenant org switching is out of
+  scope for this demo.

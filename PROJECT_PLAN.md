@@ -68,7 +68,7 @@ web/
 1. **Plan doc** (this document) - done
 2. **Scaffold**: Vite + React + TS app boots, empty R3F canvas renders
 3. **Desk scene prototype**: cubicle wall + table + scattered draggable/knockable papers, hold-to-face click, spacebar reset - using offline fixture data only
-4. **Xero data layer**: live OAuth2 fetch with automatic fallback to offline fixture + live/offline indicator
+4. **Xero data layer**: live OAuth2 fetch with automatic fallback to offline fixture + live/offline indicator - done (Cloudflare Worker backend in `web/src/worker/`, see `web/README.md`)
 5. **Polish pass**: lighting, wall image variety, paper texture fidelity, performance check with ~50 papers
 6. **Internal demo**: share build/PR with the team
 
