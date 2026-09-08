@@ -28,21 +28,32 @@ function seededRandom(seed: number) {
   };
 }
 
+// The first STACKED_INVOICE_COUNT invoices (in fetch order) are always
+// piled into STACK_COUNT even stacks rather than scattered individually -
+// e.g. "the first 20 invoices should be in two stacks of 10".
+const STACKED_INVOICE_COUNT = 20;
+const STACK_COUNT = 2;
+
 /**
- * Lays invoices out across the table: most scattered individually at random
- * positions/rotations, with a few grouped into small stacks (slight vertical
- * offset + tight position jitter) so there's something satisfying to knock
- * over.
+ * Lays invoices out across the table: the first `STACKED_INVOICE_COUNT`
+ * invoices form `STACK_COUNT` neat stacks (slight vertical offset + tight
+ * position jitter so they still look hand-placed), and every remaining
+ * invoice is scattered individually at a random position/rotation so
+ * there's still something satisfying to knock over.
  */
 export function generateInitialLayout(invoices: Invoice[]): PaperLayout[] {
   const rand = seededRandom(1337);
   const layouts: PaperLayout[] = [];
 
-  const stackCount = Math.min(4, Math.floor(invoices.length / 8));
-  const stackSize = 5;
+  const stackedCount = Math.min(STACKED_INVOICE_COUNT, invoices.length);
+  const stackCount = stackedCount > 0 ? Math.min(STACK_COUNT, stackedCount) : 0;
+  const baseStackSize = stackCount > 0 ? Math.floor(stackedCount / stackCount) : 0;
+  let extra = stackCount > 0 ? stackedCount % stackCount : 0;
   let idx = 0;
 
   for (let s = 0; s < stackCount; s++) {
+    const stackSize = baseStackSize + (extra > 0 ? 1 : 0);
+    if (extra > 0) extra--;
     const cx = (rand() - 0.5) * (TABLE_WIDTH - 0.6);
     const cz = (rand() - 0.5) * (TABLE_DEPTH - 0.6);
     const baseRotY = rand() * Math.PI * 2;
