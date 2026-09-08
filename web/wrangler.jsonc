@@ -1,31 +1,33 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "perspectivebias",
-  "compatibility_date": "2026-09-07",
-  "main": "./src/worker/index.ts",
-  "assets": {
-    "directory": "./public",
-    "not_found_handling": "single-page-application",
-    "binding": "ASSETS",
-    // Only send API routes through the Worker; everything else is served
-    // straight from static assets for performance.
-    "run_worker_first": ["/api/*"]
-  },
-  "observability": {
-    "enabled": true
-  },
-  // Holds the Xero OAuth2 access/refresh tokens + tenant id. Create with:
-  //   wrangler kv namespace create XERO_TOKENS
-  // then replace the id below with the one it prints (and add a
-  // "preview_id" from `--preview` if you use `wrangler dev` remotely).
-  "kv_namespaces": [
-    {
-      "binding": "XERO_TOKENS",
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
-    }
-  ],
-  "vars": {
-    // Must exactly match the redirect URI registered on the Xero app.
-    "XERO_REDIRECT_URI": "https://bounce.ledgerscope.com/api/xero/callback"
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "perspectivebias",
+	"compatibility_date": "2026-09-07",
+	"main": "./src/worker/index.ts",
+	"assets": {
+		"directory": "./public",
+		"not_found_handling": "single-page-application",
+		"binding": "ASSETS",
+		// Only send API routes through the Worker; everything else is served
+		// straight from static assets for performance.
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"observability": {
+		"enabled": true
+	},
+	// Holds the Xero OAuth2 access/refresh tokens + tenant id. Create with:
+	//   wrangler kv namespace create XERO_TOKENS
+	// then replace the id below with the one it prints (and add a
+	// "preview_id" from `--preview` if you use `wrangler dev` remotely).
+	"kv_namespaces": [
+		{
+			"binding": "XERO_TOKENS",
+			"id": "82764d02c4364f659e9f0e9efec5dc80"
+		}
+	],
+	"vars": {
+		// Must exactly match the redirect URI registered on the Xero app.
+		"XERO_REDIRECT_URI": "https://bounce.ledgerscope.com/api/xero/callback"
+	}
 }
