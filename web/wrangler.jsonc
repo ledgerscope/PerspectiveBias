@@ -1,10 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "perspectivebias",
-  "compatibility_date": "2025-01-01",
+  "compatibility_date": "2026-09-07",
   "main": "./src/worker/index.ts",
   "assets": {
-    "directory": "./dist",
+    "directory": "./public",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
     // Only send API routes through the Worker; everything else is served
