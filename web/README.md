@@ -41,6 +41,23 @@ included in this prototype; without it the app runs entirely on the bundled
 offline fixture, which is by design (this is also the "wifi dropped"
 fallback path).
 
+## Cloudflare Worker deployment
+
+This app is configured to deploy as a Cloudflare Worker (static assets) named
+`perspectivebias`, using [`wrangler.jsonc`](./wrangler.jsonc):
+
+```bash
+npm run build       # produces the static site in dist/
+npm run deploy      # builds, then runs `wrangler deploy`
+npm run cf:dev       # builds, then runs `wrangler dev` for a local Worker preview
+```
+
+`wrangler deploy` requires Cloudflare credentials in the environment (e.g. a
+`CLOUDFLARE_API_TOKEN` with Workers deploy permissions, plus `CLOUDFLARE_ACCOUNT_ID`
+if the account isn't already selected), or being logged in via `wrangler login`.
+The Worker serves `dist/` as static assets with `not_found_handling` set to
+`single-page-application`, so unmatched routes fall back to `index.html`.
+
 ## Project structure
 
 ```
