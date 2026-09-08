@@ -73,6 +73,9 @@ export function Cheque({
   const faceMeshRef = useRef<THREE.Mesh>(null);
   const baseMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const faceMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const glowMeshRef = useRef<THREE.Mesh>(null);
+  const glowMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const glowOpacityRef = useRef(0);
   const floatScaleRef = useRef(1);
   const floatPosRef = useRef<THREE.Vector3 | null>(null);
   const floatQuatRef = useRef<THREE.Quaternion | null>(null);
@@ -148,6 +151,21 @@ export function Cheque({
         material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, 0, 10, delta);
       }
     }
+    // The emissive tint above still gets washed out by the lit paper
+    // texture/scene lighting, especially zoomed out, so layer an *unlit*
+    // solid-green overlay plane on top of the face - its rendered colour is
+    // exactly the material colour (not affected by scene light), so it
+    // always reads as a clear, solid dark green regardless of zoom or
+    // lighting. It's slightly larger than the cheque so it also forms a
+    // thin visible border/halo around the edges.
+    glowOpacityRef.current = THREE.MathUtils.damp(
+      glowOpacityRef.current,
+      targetIntensity > 0 ? 0.82 : 0,
+      10,
+      delta,
+    );
+    if (glowMaterialRef.current) glowMaterialRef.current.opacity = glowOpacityRef.current;
+    if (glowMeshRef.current) glowMeshRef.current.visible = glowOpacityRef.current > 0.01;
 
     // While floating up beside/onto the held invoice (selected or mid-staple
     // rotation), the cheque's camera-facing plane and the invoice's own
@@ -159,11 +177,17 @@ export function Cheque({
     // forcing a high render order for as long as it needs to visually sit
     // "on top" guarantees it never gets clipped by the invoice underneath,
     // regardless of the exact tilt at any given frame.
-    const forceOnTop = isSelected || isStapling;
-    for (const mesh of [baseMeshRef.current, faceMeshRef.current]) {
+    // A *glowing but not-yet-selected* cheque needs the same treatment: the
+    // held invoice is deliberately positioned over a big chunk of the desk
+    // (left-hand side), so a matching cheque that happens to be scattered
+    // underneath that screen area would otherwise be fully hidden behind the
+    // invoice's own paper - useless as a "look, here it is" highlight if the
+    // user can't actually see it.
+    const forceOnTop = matches || isStapling;
+    for (const mesh of [baseMeshRef.current, faceMeshRef.current, glowMeshRef.current]) {
       if (mesh) mesh.renderOrder = forceOnTop ? 10 : 0;
     }
-    for (const material of [baseMaterialRef.current, faceMaterialRef.current]) {
+    for (const material of [baseMaterialRef.current, faceMaterialRef.current, glowMaterialRef.current]) {
       if (material) material.depthTest = !forceOnTop;
     }
 
@@ -374,6 +398,28 @@ export function Cheque({
         <mesh ref={faceMeshRef} position={[0, CHEQUE_THICKNESS / 2 + 0.0003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[CHEQUE_WIDTH, CHEQUE_HEIGHT]} />
           <meshStandardMaterial ref={faceMaterialRef} map={texture} roughness={0.85} />
+        </mesh>
+        {/* Unlit solid-green "matches the held invoice" overlay - sits just
+            above the printed face and slightly oversized so it also reads as
+            a thin border, and is unaffected by scene lighting so it always
+            looks like a clear, solid dark green rather than a washed-out
+            tint (this is what the camera-facing side actually shows). */}
+        <mesh
+          ref={glowMeshRef}
+          position={[0, CHEQUE_THICKNESS / 2 + 0.0006, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          visible={false}
+          raycast={() => null}
+        >
+          <planeGeometry args={[CHEQUE_WIDTH * 1.06, CHEQUE_HEIGHT * 1.06]} />
+          <meshBasicMaterial
+            ref={glowMaterialRef}
+            color={GLOW_COLOR}
+            transparent
+            opacity={0}
+            depthWrite={false}
+            toneMapped={false}
+          />
         </mesh>
       </group>
     </RigidBody>
