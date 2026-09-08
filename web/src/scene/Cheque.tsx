@@ -137,7 +137,9 @@ export function Cheque({
     // below), so the glow reads correctly from any angle.
     const targetIntensity = matches && !isSelected ? 1 : 0;
     if (targetIntensity > 0) glowClockRef.current += delta;
-    const pulse = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(glowClockRef.current * 4));
+    // Brighter, more saturated pulse (was 0.35-0.70, hard to notice against
+    // the desk clutter) so a matching cheque unmistakably reads as glowing.
+    const pulse = 0.9 + 0.7 * (0.5 + 0.5 * Math.sin(glowClockRef.current * 4));
     for (const material of [baseMaterialRef.current, faceMaterialRef.current]) {
       if (!material) continue;
       if (targetIntensity > 0) {

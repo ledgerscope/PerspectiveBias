@@ -49,7 +49,10 @@ export function StapledBundle({
     () => createInvoiceTexture(invoice, referenceDate, true),
     [invoice, referenceDate],
   );
-  const restRotationY = useMemo(() => (rngFromString(`${id}-rest`)() - 0.5) * 0.6, [id]);
+  // Small resting-angle jitter only - was up to +-17deg (0.6 rad total
+  // range) which made the tray look like a messy scattered pile rather than
+  // a tidy stack.
+  const restRotationY = useMemo(() => (rngFromString(`${id}-rest`)() - 0.5) * 0.16, [id]);
   const restEuler = useMemo(
     () => new THREE.Euler(-Math.PI / 2, 0, restRotationY),
     [restRotationY],

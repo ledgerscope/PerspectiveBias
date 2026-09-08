@@ -24,10 +24,37 @@ import { StatusOverlay } from "../components/StatusOverlay";
 // Fixed desk spots for the reconciliation tools, all clustered together near
 // one front corner of the desk (see toolZone.ts, which scattered/stacked
 // paperwork is kept clear of) so the tray, stamp and stapler are easy to
-// find and reach together once an invoice is held.
+// find and reach together once an invoice is held. Both tools already have
+// their base mesh positioned so its underside sits right at the group's own
+// origin (see StampTool.tsx/StaplerTool.tsx), so their home position only
+// needs a hairline epsilon above the desk surface to avoid z-fighting - not
+// the multi-centimetre offsets that used to leave them visibly hovering.
 const TRAY_POSITION: [number, number, number] = [TRAY_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.006, TRAY_XZ[1]];
-const STAMP_HOME: [number, number, number] = [STAMP_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.05, STAMP_XZ[1]];
-const STAPLER_HOME: [number, number, number] = [STAPLER_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.02, STAPLER_XZ[1]];
+const STAMP_HOME: [number, number, number] = [STAMP_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.002, STAMP_XZ[1]];
+const STAPLER_HOME: [number, number, number] = [STAPLER_XZ[0], TABLE_DIMENSIONS.surfaceY + 0.002, STAPLER_XZ[1]];
+
+// Three loosely-offset "sub-pile" anchors within the tray's footprint, so
+// bundles read as a neat set of small stacks rather than one single tower
+// that keeps growing taller as more invoices get reconciled (or, before
+// this, a single wide pile scattered almost edge-to-edge across the tray).
+// Cycling through these keeps each sub-pile's height - and the position
+// jitter within it - small and tidy.
+const TRAY_SUBPILE_ANCHORS: Array<[number, number]> = [
+  [-0.075, -0.02],
+  [0, 0.03],
+  [0.075, -0.03],
+];
+
+function trayBundlePosition(index: number, seedPrefix: string): [number, number, number] {
+  const anchor = TRAY_SUBPILE_ANCHORS[index % TRAY_SUBPILE_ANCHORS.length];
+  const layer = Math.floor(index / TRAY_SUBPILE_ANCHORS.length);
+  const jitter = rngFromString(`${seedPrefix}-${index}`);
+  return [
+    TRAY_POSITION[0] + anchor[0] + (jitter() - 0.5) * 0.02,
+    TRAY_POSITION[1] + 0.01 + layer * 0.0035,
+    TRAY_POSITION[2] + anchor[1] + (jitter() - 0.5) * 0.016,
+  ];
+}
 
 interface StapledBundleData {
   id: string;
@@ -104,12 +131,7 @@ export function Scene() {
       chequesByInvoice.set(cheque.invoiceId, list);
     }
     return Array.from(chequesByInvoice.entries()).map(([invoiceId, chequeIds], index) => {
-      const jitter = rngFromString(`tray-preexisting-${invoiceId}`);
-      const position: [number, number, number] = [
-        TRAY_POSITION[0] + (jitter() - 0.5) * 0.08,
-        TRAY_POSITION[1] + 0.01 + index * 0.006,
-        TRAY_POSITION[2] + (jitter() - 0.5) * 0.06,
-      ];
+      const position = trayBundlePosition(index, "tray-preexisting");
       return { invoiceId, chequeIds, position };
     });
   }, [cheques, preStapledInvoiceIds]);
@@ -170,12 +192,7 @@ export function Scene() {
       setStaplingChequeIds(chequeIds);
       staplingTimeoutRef.current = setTimeout(() => {
         const index = bundleCountRef.current++;
-        const jitter = rngFromString(`tray-${index}`);
-        const endPosition: [number, number, number] = [
-          TRAY_POSITION[0] + (jitter() - 0.5) * 0.08,
-          TRAY_POSITION[1] + 0.01 + index * 0.006,
-          TRAY_POSITION[2] + (jitter() - 0.5) * 0.06,
-        ];
+        const endPosition = trayBundlePosition(index, "tray");
         setBundles((prev) => [
           ...prev,
           { id: `bundle-${invoiceId}`, invoiceId, chequeIds, startPosition, endPosition },
