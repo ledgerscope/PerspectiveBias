@@ -6,6 +6,7 @@ import { Desk } from "./Desk";
 import { CubicleWall } from "./CubicleWall";
 import { Paper } from "./Paper";
 import { RotaryPhone } from "./RotaryPhone";
+import { Ashtray } from "./Ashtray";
 import { generateInitialLayout, TABLE_DIMENSIONS } from "./layout";
 import { useInvoices } from "./useInvoices";
 import { useResetOnSpace } from "./useResetOnSpace";
@@ -45,6 +46,7 @@ export function Scene() {
           <Desk />
           <CubicleWall />
           <RotaryPhone />
+          <Ashtray />
           {layouts.map((layout) => (
             <Paper
               key={layout.id}
