@@ -3,11 +3,12 @@ import type { Invoice, InvoiceFetchResult } from "./types";
 /**
  * Fetches invoices from the live Xero API.
  *
- * This expects a small backend/proxy at `/api/xero/invoices` that holds the
- * OAuth2 token and forwards the request to Xero (the Xero API cannot be
- * called directly from the browser due to CORS + secret handling). For the
- * internal demo, if that endpoint isn't available, the caller falls back to
- * the offline fixture automatically.
+ * This calls a small backend/proxy at `/api/xero/invoices` (a Cloudflare
+ * Worker, see `src/worker/`) that holds the OAuth2 token and forwards the
+ * request to Xero (the Xero API cannot be called directly from the browser
+ * due to CORS + secret handling). If no Xero org is connected yet, or the
+ * call fails/times out, the caller falls back to the offline fixture
+ * automatically.
  */
 async function fetchLiveInvoices(signal: AbortSignal): Promise<Invoice[]> {
   const response = await fetch("/api/xero/invoices", { signal });
