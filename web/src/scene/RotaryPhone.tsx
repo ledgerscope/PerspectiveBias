@@ -16,10 +16,20 @@ const BODY_CORNER_RADIUS = 0.045;
 const DIAL_RADIUS = 0.06;
 // Dial sits recessed into the front-top face, tilted up toward the viewer
 // rather than lying perfectly flat, the way real desk-phone dials are raked.
-// Kept small - the dial ring's radius plus this tilt must stay within the
-// box's flat top area (inside BODY_CORNER_RADIUS from every edge), otherwise
-// the ring pokes out past the front face and floats disconnected in the air.
-const DIAL_TILT = 0.16; // rad, added on top of the flat "-PI/2" (facing up)
+// The tilt is steep enough that the dial's own boundary dips below the
+// case's flat-top surface height on its near side - a small raised "boss"
+// (see DIAL_RISER_* below) bridges that gap so the plate reads as sitting
+// proud of the case rather than being swallowed by it.
+const DIAL_TILT = 0.65; // rad, added on top of the flat "-PI/2" (facing up)
+const DIAL_ROTATION_X = -Math.PI / 2 + DIAL_TILT;
+// Outward face normal of the tilted dial plate, used to offset the raised
+// boss so its far (embedded) end disappears into the case and its near end
+// sits flush under the ring - see the geometry note above `Handset`.
+const DIAL_NORMAL: [number, number, number] = [0, -Math.sin(DIAL_ROTATION_X), Math.cos(DIAL_ROTATION_X)];
+const DIAL_MOUNT_Y = BODY_HEIGHT + 0.055;
+const DIAL_MOUNT_Z = BODY_DEPTH * 0.02;
+const DIAL_RISER_HEIGHT = 0.08;
+const DIAL_RISER_RADIUS = DIAL_RADIUS + 0.02;
 const CLICK_MAX_MOVEMENT = 6; // px - matches Paper.tsx's click-vs-drag threshold
 
 // Glossy black bakelite/plastic body colour + brass trim, matched to a
@@ -87,7 +97,12 @@ function Handset() {
   }, []);
 
   return (
-    <group position={[0, BODY_HEIGHT + 0.075, -0.01]}>
+    // Sits back over the cradle horns (same z as the horns below) rather
+    // than centred over the phone, so its arc doesn't hang in front of the
+    // dial and block the logo from the player's actual (elevated, angled)
+    // desk-view camera - only the handset's own footprint should overlap
+    // the horns, leaving the whole front dial face in the clear.
+    <group position={[0, BODY_HEIGHT + 0.1, -0.05]}>
       <mesh geometry={handleGeometry} castShadow receiveShadow>
         <meshStandardMaterial color={BODY_COLOR} roughness={0.35} metalness={0.2} />
       </mesh>
@@ -197,19 +212,40 @@ export function RotaryPhone() {
             <meshStandardMaterial color={BODY_COLOR} roughness={0.35} metalness={0.25} />
           </RoundedBox>
 
-          {/* Brass bezel ring framing the dial, raked up toward the viewer. */}
+          {/* Raised boss the dial ring sits on: bridges the case's flat top
+              up to the steeply-tilted dial plate so the plate reads as a
+              proud, mounted control panel rather than being half-swallowed
+              by the case (its far end is pushed behind the surface so the
+              seam disappears into the body). */}
           <mesh
-            position={[0, BODY_HEIGHT - 0.004, BODY_DEPTH * 0.05]}
-            rotation={[-Math.PI / 2 + DIAL_TILT, 0, 0]}
+            position={[
+              0,
+              DIAL_MOUNT_Y - DIAL_NORMAL[1] * (DIAL_RISER_HEIGHT / 2),
+              DIAL_MOUNT_Z - DIAL_NORMAL[2] * (DIAL_RISER_HEIGHT / 2),
+            ]}
+            // cylinderGeometry's own axis runs along local Y, 90deg away from
+            // the disc's local Z-facing normal, so it needs that extra
+            // quarter-turn to line its axis up with DIAL_NORMAL above.
+            rotation={[DIAL_ROTATION_X + Math.PI / 2, 0, 0]}
           >
+            <cylinderGeometry args={[DIAL_RISER_RADIUS, DIAL_RISER_RADIUS, DIAL_RISER_HEIGHT, 32]} />
+            <meshStandardMaterial color={BODY_COLOR} roughness={0.4} metalness={0.2} />
+          </mesh>
+
+          {/* Brass bezel ring framing the dial, raked up toward the viewer. */}
+          <mesh position={[0, DIAL_MOUNT_Y, DIAL_MOUNT_Z]} rotation={[DIAL_ROTATION_X, 0, 0]}>
             <torusGeometry args={[DIAL_RADIUS + 0.006, 0.008, 12, 48]} />
             <meshStandardMaterial {...goldMaterialProps} />
           </mesh>
 
           {/* Dial face */}
           <mesh
-            position={[0, BODY_HEIGHT - 0.001, BODY_DEPTH * 0.05]}
-            rotation={[-Math.PI / 2 + DIAL_TILT, 0, 0]}
+            position={[
+              DIAL_NORMAL[0] * 0.003,
+              DIAL_MOUNT_Y + DIAL_NORMAL[1] * 0.003,
+              DIAL_MOUNT_Z + DIAL_NORMAL[2] * 0.003,
+            ]}
+            rotation={[DIAL_ROTATION_X, 0, 0]}
           >
             <circleGeometry args={[DIAL_RADIUS, 48]} />
             <meshStandardMaterial map={dialTexture} roughness={0.55} />
