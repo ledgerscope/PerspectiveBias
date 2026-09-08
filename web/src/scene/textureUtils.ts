@@ -215,19 +215,14 @@ const DIAL_DOT_COLOR: Record<PhoneDialState, string> = {
   disabled: "#f39c12",
 };
 
-// Standard-ish rotary-dial finger-hole numbering, clockwise from just past
-// the finger stop at the bottom: 1 through 9, then 0 back near the top.
-const DIAL_NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-
 /**
  * Renders the "dial face" texture for the desk's rotary phone prop as a
- * classic rotary dial: a brass finger-hole ring numbered 1-0 around a
- * cream faceplate, with a small centre "number card" window carrying a
- * plain text "XERO" wordmark (deliberately not a reproduction of Xero's
- * actual logo artwork/mark, just the brand name in their brand blue, the
- * same way a real "Connect to Xero" button would reference it) plus a
- * status dot and caption reflecting the current connection state - mimicking
- * where a real rotary phone prints its own number.
+ * Xero-branded logo plate rather than a numbered rotary dial: a plain text
+ * "XERO" wordmark (deliberately not a reproduction of Xero's actual logo
+ * artwork/mark, just the brand name in their brand blue, the same way a
+ * real "Connect to Xero" button would reference it) centred within the
+ * brass bezel, plus a status dot and caption reflecting the current
+ * connection state.
  */
 export function createPhoneDialTexture(state: PhoneDialState): THREE.CanvasTexture {
   const size = 512;
@@ -249,7 +244,8 @@ export function createPhoneDialTexture(state: PhoneDialState): THREE.CanvasTextu
   ctx.arc(cx, cy, size / 2 - 4, 0, Math.PI * 2);
   ctx.fill();
 
-  // Cream dial face, inset within the brass ring.
+  // Cream logo plate, inset within the brass ring, in place of the usual
+  // numbered finger-hole dial.
   ctx.fillStyle = "#f4f1e8";
   ctx.beginPath();
   ctx.arc(cx, cy, size / 2 - 26, 0, Math.PI * 2);
@@ -258,74 +254,21 @@ export function createPhoneDialTexture(state: PhoneDialState): THREE.CanvasTextu
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // Ten finger holes in a ring, each showing a dark "cutout" over the rotor
-  // beneath and its dialled digit, leaving a gap at the bottom for the
-  // finger stop the same way a real dial does.
-  const holeOrbit = size * 0.335;
-  const holeRadius = size * 0.062;
-  const startAngle = Math.PI / 2 + (Math.PI * 2) / 10 * 0.65; // just past 6 o'clock
-  const sweep = Math.PI * 2 * 0.92; // leaves a finger-stop gap at the bottom
-  for (let i = 0; i < DIAL_NUMBERS.length; i++) {
-    const angle = startAngle + (sweep / (DIAL_NUMBERS.length - 1)) * i;
-    const hx = cx + Math.cos(angle) * holeOrbit;
-    const hy = cy + Math.sin(angle) * holeOrbit;
-
-    ctx.beginPath();
-    ctx.fillStyle = "#1c1c1c";
-    ctx.arc(hx, hy, holeRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#9c9284";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = "#f4f1e8";
-    ctx.font = `bold ${Math.round(size * 0.045)}px Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(DIAL_NUMBERS[i], hx, hy);
-  }
-
-  // Small brass finger-stop wedge at the bottom of the dial.
-  ctx.fillStyle = "#8a6320";
-  ctx.beginPath();
-  ctx.moveTo(cx - 14, cy + holeOrbit + holeRadius + 6);
-  ctx.lineTo(cx + 14, cy + holeOrbit + holeRadius + 6);
-  ctx.lineTo(cx, cy + holeOrbit - holeRadius - 2);
-  ctx.closePath();
-  ctx.fill();
-
-  // Centre "number card" window - the same spot a real rotary phone prints
-  // its own number, repurposed for the Xero wordmark + connection status.
-  const cardRadius = size * 0.225;
-  ctx.beginPath();
-  ctx.fillStyle = "#fffdf6";
-  ctx.arc(cx, cy, cardRadius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#8a6320";
-  ctx.lineWidth = 5;
-  ctx.stroke();
-
   ctx.fillStyle = "#13b5ea"; // Xero's brand blue - text only, not the logo mark.
-  ctx.font = "bold 58px Arial";
+  ctx.font = "bold 100px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("XERO", cx, cy - 24);
+  ctx.fillText("XERO", cx, cy - 30);
 
   ctx.beginPath();
   ctx.fillStyle = DIAL_DOT_COLOR[state];
-  ctx.arc(cx - 58, cy + 34, 10, 0, Math.PI * 2);
+  ctx.arc(cx - 96, cy + 70, 16, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = "#3a3a3a";
-  ctx.font = "20px Arial";
+  ctx.font = "30px Arial";
   ctx.textAlign = "left";
-  ctx.fillText(DIAL_CAPTION[state], cx - 40, cy + 34);
-
-  // Brass centre pivot pin, the little screw every rotary dial has.
-  ctx.beginPath();
-  ctx.fillStyle = "#d4af37";
-  ctx.arc(cx, cy + cardRadius - 8, 6, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillText(DIAL_CAPTION[state], cx - 60, cy + 70);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
